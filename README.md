@@ -106,20 +106,20 @@ Route notifications per-agent, per-project, per-session, per-window, or per-pane
 Manage peers, routes, and configuration from **any** connected device. The TUI works identically in tmux and Termux.
 
 ```
-+================================================================+
-|  Peers                                                          |
-|  * dev-server     online   12ms   5 agents   43 msgs today     |
-|  * macbook-pro    online    3ms   2 agents   18 msgs today     |
-|  * pixel-phone    online   45ms   0 agents    7 msgs today     |
-|  o work-desktop   offline  --     last seen 2h ago              |
-|                                                                 |
-|  Routes                                                         |
-|  api-server/*      -> phone, laptop                             |
-|  session:refactor  -> telegram                                  |
-|  priority:critical -> ALL                                       |
-|                                                                 |
-|  [p]eers  [r]outes  [m]etrics  [a]dd device  [q]uit            |
-+=================================================================+
++===============================================================+
+|  Peers                                                        |
+|  * dev-server     online   12ms   5 agents   43 msgs today    |
+|  * macbook-pro    online    3ms   2 agents   18 msgs today    |
+|  * pixel-phone    online   45ms   0 agents    7 msgs today    |
+|  o work-desktop   offline  --     last seen 2h ago            |
+|                                                               |
+|  Routes                                                       |
+|  api-server/*      -> phone, laptop                           |
+|  session:refactor  -> telegram                                |
+|  priority:critical -> ALL                                     |
+|                                                               |
+|  [p]eers  [r]outes  [m]etrics  [a]dd device  [q]uit           |
++===============================================================+
 ```
 
 ### Smart Local Notifications
