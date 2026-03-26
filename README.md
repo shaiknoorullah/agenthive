@@ -1,6 +1,24 @@
+<div align="center">
+
 # agenthive
 
-A self-hosted, encrypted peer-to-peer mesh that connects your AI coding agents across devices. Get notifications, approve actions, and control agents from your terminal -- whether that's tmux on a server, your laptop, or Termux on your phone. No cloud. No intermediaries. Just your machines, talking directly.
+**A self-hosted, encrypted mesh for AI agent notification and control.**
+
+[![CI](https://github.com/shaiknoorullah/agenthive/actions/workflows/ci.yml/badge.svg)](https://github.com/shaiknoorullah/agenthive/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/shaiknoorullah/agenthive)](https://goreportcard.com/report/github.com/shaiknoorullah/agenthive)
+[![Go Reference](https://pkg.go.dev/badge/github.com/shaiknoorullah/agenthive.svg)](https://pkg.go.dev/github.com/shaiknoorullah/agenthive)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/shaiknoorullah/agenthive?sort=semver)](https://github.com/shaiknoorullah/agenthive/releases)
+
+Get notifications, approve actions, and control your AI coding agents from anywhere --
+your server, your laptop, or your phone. No cloud. No intermediaries. Just your machines, talking directly.
+
+[Getting Started](#getting-started) |
+[Features](#features) |
+[Architecture](#architecture) |
+[Contributing](CONTRIBUTING.md)
+
+</div>
 
 ---
 
@@ -14,58 +32,80 @@ You tap Allow. Claude proceeds. No cloud service touched the message.
 
 agenthive turns every terminal into a command center for your agents.
 
----
-
 ## How It Works
 
-```
-  SERVER (tmux)                LAPTOP (tmux)              PHONE (Termux)
-  +-----------------+         +-----------------+        +------------------+
-  | Claude Code     |         | Desktop notifs  |        | Android push     |
-  | Codex CLI       |   SSH   | tmux status bar |  SSH   | termux-notif     |
-  | Custom agents   |<=======>| Action popups   |<======>| Action buttons   |
-  |                 | tunnel  | TUI dashboard   | tunnel | TUI dashboard    |
-  +-----------------+         +-----------------+        +------------------+
-        |                            |                          |
-        +----------------------------+--------------------------+
-                         Encrypted mesh (same daemon)
-                         CRDT-synced config & routing
-                         Manage from ANY device
+```mermaid
+graph LR
+    subgraph Server["Server (tmux)"]
+        CC[Claude Code]
+        CX[Codex CLI]
+        H[agenthive hook]
+        CC --> H
+        CX --> H
+    end
+
+    subgraph Laptop["Laptop (tmux)"]
+        DN[Desktop Notifs]
+        SB[tmux Status Bar]
+        TUI1[TUI Dashboard]
+    end
+
+    subgraph Phone["Phone (Termux)"]
+        AN[Android Push]
+        AB[Action Buttons]
+        TUI2[TUI Dashboard]
+    end
+
+    H <-->|"SSH Tunnel<br/>(encrypted)"| D1[agenthive daemon]
+    D1 <-->|"SSH Tunnel<br/>(encrypted)"| D2[agenthive daemon]
+    D1 <-->|"SSH Tunnel<br/>(encrypted)"| D3[agenthive daemon]
+
+    D2 --> DN
+    D2 --> SB
+    D2 --> TUI1
+
+    D3 --> AN
+    D3 --> AB
+    D3 --> TUI2
+
+    style Server fill:#1a1b26,stroke:#7aa2f7,color:#c0caf5
+    style Laptop fill:#1a1b26,stroke:#9ece6a,color:#c0caf5
+    style Phone fill:#1a1b26,stroke:#e0af68,color:#c0caf5
 ```
 
 Every device runs the same `agenthive` daemon. Every device is an equal peer. Change a routing rule on your phone -- the server learns instantly.
 
 ## Features
 
-### Notifications That Reach You Anywhere
+### Reach You Anywhere
 
-- **tmux status bar** -- native per-pane notifications, zero shell forks
-- **Desktop** -- `notify-send` (Linux), `osascript` (macOS)
-- **Android** -- native push via `termux-notification`, with action buttons
+- **tmux status bar** -- native per-pane notifications with zero shell forks
+- **Desktop** -- `notify-send` on Linux, `osascript` on macOS
+- **Android** -- native push notifications with action buttons via Termux
 - **Audio** -- terminal bell, system sounds, or custom audio files
 
 ### Bidirectional Agent Control
 
-- **Action buttons** -- Allow/Deny agent permission requests from any device
+- **Action buttons** -- approve or deny agent permission requests from any device
 - **Remote commands** -- tell agents on remote servers what to do from your phone
-- **Hook-native** -- uses Claude Code's `PreToolUse` hook for programmatic allow/deny (no keystroke injection)
+- **Hook-native** -- uses Claude Code's `PreToolUse` hook for programmatic allow/deny, no keystroke injection
 
 ### Intelligent Routing
 
-```
+```bash
 agenthive routes add "project:api-server -> phone, laptop"
 agenthive routes add "session:refactor -> telegram"
 agenthive routes add "priority:critical -> ALL"
 agenthive routes add "source:Codex -> desktop-only"
 ```
 
-Route notifications per-agent, per-project, per-session, per-window, or per-pane. Rules sync across all peers automatically.
+Route notifications per-agent, per-project, per-session, per-window, or per-pane. Rules sync across all peers automatically via CRDTs.
 
 ### Distributed Mesh Management
 
-```
-$ agenthive tui
+Manage peers, routes, and configuration from **any** connected device. The TUI works identically in tmux and Termux.
 
+```
 +================================================================+
 |  Peers                                                          |
 |  * dev-server     online   12ms   5 agents   43 msgs today     |
@@ -77,23 +117,19 @@ $ agenthive tui
 |  api-server/*      -> phone, laptop                             |
 |  session:refactor  -> telegram                                  |
 |  priority:critical -> ALL                                       |
-|  default           -> laptop                                    |
 |                                                                 |
 |  [p]eers  [r]outes  [m]etrics  [a]dd device  [q]uit            |
 +=================================================================+
 ```
 
-Manage peers, routes, and configuration from **any** connected device. The TUI works identically in tmux and Termux.
-
 ### Smart Local Notifications
 
-Built on native tmux per-pane options (not files):
+Built on native tmux per-pane options -- not filesystem polling:
 
 - **Atomic** -- no race conditions, no dual-file writes
 - **Zero-fork** -- status line renders via tmux format strings, not shell commands
 - **O(1) clearing** -- inline hook, no directory scanning
 - **Auto-cleanup** -- pane destruction clears notifications automatically
-- **Multi-agent** -- each pane gets its own notification slot
 - **Worktree-aware** -- shows `project/worktree` for git worktrees
 
 ### Priority Levels
@@ -104,191 +140,119 @@ Built on native tmux per-pane options (not files):
 [14:32] Codex/docs: Needs approval            <- yellow (warning)
 ```
 
-Critical notifications persist longer, route to more devices, and can trigger audio/desktop alerts.
-
 ### Agent State Tracking
 
 ```
 * api-server   ? frontend   * docs-gen
 ```
 
-Green = running, yellow = needs input, blue = done. Visible in status bar and dashboard.
+Running, waiting, done -- visible in status bar and dashboard.
 
 ### Notification Grouping
 
-When 5 agents in the same project finish within seconds:
+When multiple agents in the same project finish simultaneously:
 
 ```
-[14:30] Claude/my-project: 5 agents finished    <- instead of 5 separate notifications
+[14:30] Claude/my-project: 5 agents finished
 ```
 
 Expand details in the picker or dashboard.
 
-## Requirements
+## Getting Started
 
-- tmux 3.2+ (for local notifications)
+### Requirements
+
+- Go 1.22+ (build from source) or grab a [prebuilt binary](https://github.com/shaiknoorullah/agenthive/releases)
+- tmux 3.2+
+- SSH keys configured
 - [fzf](https://github.com/junegunn/fzf) (for notification picker)
-- SSH keys configured (for mesh transport)
-- Go 1.22+ (to build from source, or use prebuilt binaries)
+- [Termux](https://termux.dev) + [Termux:API](https://wiki.termux.com/wiki/Termux:API) (Android, optional)
 
-### Optional
-
-- [Termux](https://termux.dev) + [Termux:API](https://wiki.termux.com/wiki/Termux:API) (Android peer)
-- [jq](https://jqlang.github.io/jq/) (enhanced JSON handling in hooks)
-
-## Installation
-
-### From Source
+### Install
 
 ```bash
 go install github.com/shaiknoorullah/agenthive@latest
 ```
 
-### Prebuilt Binaries
-
-Download from [Releases](https://github.com/shaiknoorullah/agenthive/releases) for:
-- `linux/amd64`, `linux/arm64`
-- `darwin/amd64`, `darwin/arm64` (macOS)
-- `linux/arm64` (Termux/Android)
+Or download a prebuilt binary from [Releases](https://github.com/shaiknoorullah/agenthive/releases) for `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`.
 
 ### Termux (Android)
 
 ```bash
 pkg install openssh autossh jq
-# Install agenthive binary for linux/arm64
-# Install Termux:API from F-Droid for termux-notification
+# download the linux/arm64 binary from releases
+# install Termux:API from F-Droid for native notifications
 ```
 
-### tmux Plugin (TPM)
-
-For local tmux notifications only (no mesh):
+### tmux Plugin (local notifications only)
 
 ```tmux
 set -g @plugin 'shaiknoorullah/agenthive'
 ```
 
-## Quick Start
-
-### 1. Initialize
+### Quick Start
 
 ```bash
-# On every device:
+# 1. Initialize on every device
 agenthive init
-```
 
-Generates an Ed25519 peer identity. Run this on your server, laptop, and phone.
-
-### 2. Pair Devices
-
-```bash
-# From your server, pair with your laptop:
+# 2. Pair your devices
 agenthive pair --remote user@laptop
+agenthive pair --remote user@phone:8022    # Termux
 
-# From your laptop, pair with your phone (Termux):
-agenthive pair --remote user@phone:8022
-```
-
-Or use QR code pairing for Termux:
-
-```bash
-# On laptop:
-agenthive pair --qr
-
-# On phone (scan the QR, or):
-agenthive pair --manual
-```
-
-### 3. Establish Links
-
-```bash
-# Server -> Laptop (SSH tunnel):
+# 3. Establish links
 agenthive link --to laptop --via ssh
-
-# Server -> Phone (SSH tunnel to Termux):
 agenthive link --to phone --via ssh
 
-# LAN peers (direct, no SSH overhead):
-agenthive link --to laptop --via tcp
-```
-
-### 4. Start the Daemon
-
-```bash
-# On every device:
+# 4. Start the daemon
 agenthive start --daemon
-```
 
-### 5. Configure Claude Code Hooks
+# 5. Configure Claude Code hooks
+agenthive hooks install    # adds hooks to ~/.claude/settings.json
 
-```json
-{
-  "hooks": {
-    "PreToolUse": [{
-      "hooks": [{
-        "type": "command",
-        "command": "agenthive hook PreToolUse"
-      }]
-    }],
-    "Stop": [{
-      "hooks": [{
-        "type": "command",
-        "command": "agenthive hook Stop"
-      }]
-    }],
-    "Notification": [{
-      "hooks": [{
-        "type": "command",
-        "command": "agenthive hook Notification"
-      }]
-    }]
-  }
-}
-```
-
-### 6. Set Up Routes
-
-```bash
-# All critical notifications go to every device:
+# 6. Set up routes
 agenthive routes add "priority:critical -> ALL"
-
-# API project goes to phone and laptop:
 agenthive routes add "project:api-server -> phone, laptop"
-
-# Everything else just goes to laptop:
 agenthive routes add "default -> laptop"
 ```
 
-Done. Your agents are now connected to your mesh.
+Done. Your agents are connected to your mesh.
 
 ## Usage
 
 ### CLI
 
 ```bash
-agenthive init                              # Generate peer identity
-agenthive pair --remote user@host           # Pair with a peer via SSH
-agenthive pair --qr                         # QR code pairing (Termux)
+# Identity & Pairing
+agenthive init                              # generate peer identity
+agenthive pair --remote user@host           # pair via SSH
+agenthive pair --qr                         # QR code pairing
 
-agenthive link --to <peer> --via ssh        # SSH tunnel link
-agenthive link --to <peer> --via tcp        # Direct TCP link (LAN)
+# Links
+agenthive link --to <peer> --via ssh        # SSH tunnel (WAN)
+agenthive link --to <peer> --via tcp        # direct TCP (LAN)
 
-agenthive start [--daemon]                  # Start the mesh daemon
-agenthive stop                              # Stop the daemon
-agenthive status                            # Show peers, links, routes
+# Daemon
+agenthive start [--daemon]                  # start mesh daemon
+agenthive stop                              # stop daemon
+agenthive status                            # peers, links, routes
 
-agenthive peers                             # List peers with status/latency
-agenthive routes                            # List routing rules
+# Management
+agenthive peers                             # list peers with metrics
+agenthive routes                            # list routing rules
 agenthive routes add "<selector> -> <targets>"
 agenthive routes del <route-id>
 
-agenthive respond allow:<request-id>        # Approve an agent action
-agenthive respond deny:<request-id>         # Deny an agent action
+# Actions
+agenthive respond allow:<request-id>        # approve agent action
+agenthive respond deny:<request-id>         # deny agent action
 
-agenthive tui                               # Interactive TUI dashboard
+# Interface
+agenthive tui                               # interactive dashboard
 
+# Hooks
 agenthive hook <event>                      # Claude Code hook handler
-agenthive config get <key>                  # Read config (synced)
-agenthive config set <key> <value>          # Set config (synced)
+agenthive hooks install                     # auto-configure Claude Code
 ```
 
 ### tmux Keybindings
@@ -300,25 +264,13 @@ agenthive config set <key> <value>          # Set config (synced)
 | `prefix + D` | Dashboard popup |
 | `prefix + Q` | Toggle Do Not Disturb |
 
-All keybindings are configurable via tmux options.
-
-### tmux Configuration
+### tmux Options
 
 ```tmux
-# Keybindings
 set -g @agenthive-key-next 'N'
 set -g @agenthive-key-picker 'S'
 set -g @agenthive-key-dashboard 'D'
-set -g @agenthive-key-dnd 'Q'
-
-# Display
 set -g @agenthive-status-line 'on'
-set -g @agenthive-status-bg 'default'
-set -g @agenthive-fg '#c8d3f5'
-set -g @agenthive-alert-fg 'yellow'
-set -g @agenthive-critical-fg 'red'
-
-# Behavior
 set -g @agenthive-desktop-notifs 'on'
 set -g @agenthive-sound 'bell'
 set -g @agenthive-stale-timeout '1800'
@@ -326,96 +278,129 @@ set -g @agenthive-stale-timeout '1800'
 
 ## Architecture
 
-### Layer Stack
+```mermaid
+block-beta
+    columns 1
+    block:layer6["Command Layer"]
+        RC["Remote agent control"]
+    end
+    block:layer5["Management Layer"]
+        TUI["Distributed TUI: peers, routes, metrics"]
+    end
+    block:layer4["Routing Layer"]
+        CRDT["CRDT-synced rules: per-agent/project/session/pane"]
+    end
+    block:layer3["Action Layer"]
+        ACT["Bidirectional allow/deny via PreToolUse hooks"]
+    end
+    block:layer2["Transport Layer"]
+        SSH["SSH tunnels (WAN)"]
+        TCP["TCP + Noise (LAN)"]
+        STUN["STUN (optional)"]
+    end
+    block:layer1["Integration Layer"]
+        TMUX["tmux options"]
+        TERM["Termux notifs"]
+        DESK["Desktop notifs"]
+    end
 
-```
-6. Command        | Remote agent control (commit, run, query)
-5. Management     | Distributed TUI: peers, routes, metrics, pairing
-4. Routing        | CRDT-synced rules: per-agent/project/session/pane targeting
-3. Actions        | Bidirectional allow/deny via PreToolUse hooks
-2. Transport      | SSH tunnels (WAN) + TCP/Noise (LAN) + optional STUN
-1. Integration    | tmux options, Termux notifs, notify-send, osascript
+    style layer6 fill:#7aa2f7,color:#1a1b26
+    style layer5 fill:#7dcfff,color:#1a1b26
+    style layer4 fill:#9ece6a,color:#1a1b26
+    style layer3 fill:#e0af68,color:#1a1b26
+    style layer2 fill:#f7768e,color:#1a1b26
+    style layer1 fill:#bb9af7,color:#1a1b26
 ```
 
 ### Transport
 
-- **WAN:** SSH reverse tunnels via autossh (zero new infrastructure)
-- **LAN:** Direct TCP with Noise Protocol encryption
-- **Optional:** STUN-assisted connections for SSH-blocked environments
+- **WAN**: SSH reverse tunnels via autossh -- zero new infrastructure
+- **LAN**: Direct TCP with Noise Protocol encryption (ChaCha20-Poly1305)
+- **Optional**: STUN-assisted connections for SSH-blocked environments
 
 ### State Synchronization
 
-Routing rules, peer registry, and configuration are distributed using **LWW-Register CRDTs** with Hybrid Logical Clocks. No leader election. No consensus protocol. All peers converge to the same state automatically.
+Configuration, routing rules, and peer registry use **LWW-Register CRDTs** with Hybrid Logical Clocks. No leader election. No consensus protocol. All peers converge automatically.
+
+```mermaid
+sequenceDiagram
+    participant Phone as Phone (Termux)
+    participant Server as Server
+    participant Laptop as Laptop
+
+    Phone->>Phone: Edit route: project:api -> phone only
+    Phone->>Server: config_sync delta (SSH tunnel)
+    Phone->>Laptop: config_sync delta (SSH tunnel)
+    Server->>Server: CRDT merge (LWW)
+    Laptop->>Laptop: CRDT merge (LWW)
+    Note over Phone,Laptop: All peers converge<br/>within milliseconds
+```
 
 ### Notification Flow
 
-```
-Agent fires hook -> agenthive daemon -> evaluate routing rules
-                                     -> forward to matching peers via SSH tunnel
-                                     -> peer dispatches to local surface:
-                                          tmux status bar (format strings)
-                                          desktop notification (notify-send)
-                                          Android notification (termux-notification)
-                                          action buttons (allow/deny)
-                                     -> response flows back through tunnel
-                                     -> hook returns decision to agent
+```mermaid
+sequenceDiagram
+    participant Agent as Claude Code
+    participant Hook as PreToolUse Hook
+    participant Daemon as agenthive daemon
+    participant Phone as Phone (Termux)
+
+    Agent->>Hook: "wants to run rm -rf /tmp/build"
+    Hook->>Daemon: action_request (Unix socket)
+    Daemon->>Daemon: evaluate routing rules
+    Daemon->>Phone: action_request (SSH tunnel)
+    Phone->>Phone: termux-notification<br/>with Allow/Deny buttons
+    Phone-->>Daemon: action_response: allow
+    Daemon-->>Hook: write response file
+    Hook-->>Agent: {"permissionDecision": "allow"}
+    Agent->>Agent: proceeds with command
 ```
 
 ### Security
 
-- **Transport:** SSH (AES-256-GCM) for WAN, Noise Protocol (ChaCha20-Poly1305) for LAN
-- **Identity:** Ed25519 key pairs per peer
-- **Authentication:** SSH key-based auth for tunnels, peer identity verification for direct links
-- **Action security:** Cryptographic request IDs, TTL expiry, audit trail
-- **No cloud:** All traffic stays between your machines
+| Layer | Encryption | Authentication |
+|-------|-----------|----------------|
+| WAN links | SSH (AES-256-GCM) | SSH key-based auth |
+| LAN links | Noise Protocol (ChaCha20-Poly1305) | Ed25519 peer identity |
+| Actions | Cryptographic request IDs + TTL | Per-surface auth |
+| Storage | `0700` permissions | Peer-scoped access |
 
-## Supported Agents
+### Supported Agents
 
 | Agent | Hook Integration | Action Buttons |
 |-------|-----------------|----------------|
-| Claude Code | PreToolUse, Stop, Notification hooks | Allow/Deny via hook JSON response |
+| Claude Code | PreToolUse, Stop, Notification | Allow/Deny via hook JSON |
 | Codex CLI | notify callback | Notification only |
-| Custom tools | Source the hook library or write to Unix socket | Full support |
+| Custom tools | Unix socket or hook library | Full support |
 
-## Comparison
+## Tech Stack
 
-| Feature | agenthive | tmux-notify | tmux-agent-indicator | tmux-agent-notifications |
-|---------|-----------|-------------|---------------------|--------------------------|
-| Multi-device mesh | Yes | No | No | No |
-| Action buttons (allow/deny) | Yes | No | No | No |
-| Remote agent control | Yes | No | No | No |
-| Android (Termux) | Yes | No | No | No |
-| Notification routing rules | Yes | No | No | No |
-| Desktop notifications | Yes | Yes | No | No |
-| Agent state tracking | Yes | No | Yes | No |
-| Priority levels | Yes | No | No | No |
-| Self-hosted (no cloud) | Yes | Yes | Yes | Yes |
-| tmux status bar | Yes | No | Yes | Yes |
-| Notification grouping | Yes | No | No | No |
+| Component | Technology |
+|-----------|-----------|
+| Daemon | Go (single static binary) |
+| TUI | [bubbletea](https://github.com/charmbracelet/bubbletea) + [lipgloss](https://github.com/charmbracelet/lipgloss) |
+| Transport | SSH / autossh (WAN), Noise Protocol (LAN) |
+| State sync | LWW-Register CRDTs + Hybrid Logical Clocks |
+| Serialization | Newline-delimited JSON |
+| Notifications | tmux options, notify-send, osascript, termux-notification |
 
 ## Project Status
 
-> **Early Development** -- agenthive is under active development. The architecture is designed, the RFCs are written, and implementation is underway. Contributions and feedback are welcome.
+> **Early Development** -- architecture is designed, RFCs are written, implementation is underway.
 
-See the [design documents](docs/rfcs/) for the full architectural rationale, including adversarial debates and judge evaluations for every major design decision.
+See `docs/rfcs/` for the full design rationale, including adversarial debates and judge evaluations for every major architectural decision.
 
 ## Contributing
 
-Contributions are welcome. Please read the design documents in `docs/rfcs/` before proposing architectural changes -- every major decision has been debated and documented.
+Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ```bash
 git clone https://github.com/shaiknoorullah/agenthive.git
 cd agenthive
 go build ./...
-go test ./...
+go test -race ./...
 ```
 
 ## License
 
-MIT
-
-## Acknowledgments
-
-- Architecture informed by analysis of [tmux-agent-notifications](https://github.com/kaiiserni/tmux-agent-notifications), [tmux-notify](https://github.com/rickstaa/tmux-notify), [tmux-agent-indicator](https://github.com/accessd/tmux-agent-indicator), and [claude_code_agent_farm](https://github.com/Dicklesworthstone/claude_code_agent_farm)
-- Transport design validated through adversarial debate between SSH tunnel and P2P/WebRTC approaches
-- Local notification architecture validated through debate between file-based and native tmux approaches
+[MIT](LICENSE)
