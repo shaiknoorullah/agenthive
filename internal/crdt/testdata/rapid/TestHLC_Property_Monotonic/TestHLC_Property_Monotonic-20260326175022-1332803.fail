@@ -1,0 +1,21 @@
+# 2026/03/26 17:50:22.799506 [TestHLC_Property_Monotonic] [rapid] draw peerID: "aaa"
+# 2026/03/26 17:50:22.799528 [TestHLC_Property_Monotonic] [rapid] draw n: 2
+# 2026/03/26 17:50:22.799536 [TestHLC_Property_Monotonic] timestamp 1 not after 0: {0001-01-01 00:00:00 +0000 UTC 0 } vs {0001-01-01 00:00:00 +0000 UTC 0 }
+# 
+v0.4.8#8806985032390147727
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0

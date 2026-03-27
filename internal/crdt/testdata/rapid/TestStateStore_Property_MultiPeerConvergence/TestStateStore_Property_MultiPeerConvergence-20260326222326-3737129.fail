@@ -1,0 +1,103 @@
+# 2026/03/26 22:23:26.591106 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw nPeers: 4
+# 2026/03/26 22:23:26.591116 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw peerID: "peer-j"
+# 2026/03/26 22:23:26.591121 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw peerID: "peer-j"
+# 2026/03/26 22:23:26.591124 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw peerID: "peer-a"
+# 2026/03/26 22:23:26.591127 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw peerID: "peer-a"
+# 2026/03/26 22:23:26.591130 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw nOps: 4
+# 2026/03/26 22:23:26.591133 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw key: "a"
+# 2026/03/26 22:23:26.591135 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw val: ""
+# 2026/03/26 22:23:26.591139 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw key: "b"
+# 2026/03/26 22:23:26.591140 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw val: ""
+# 2026/03/26 22:23:26.591144 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw key: "b"
+# 2026/03/26 22:23:26.591146 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw val: ""
+# 2026/03/26 22:23:26.591155 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw key: "b"
+# 2026/03/26 22:23:26.591157 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw val: ""
+# 2026/03/26 22:23:26.591159 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw nOps: 1
+# 2026/03/26 22:23:26.591162 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw key: "a"
+# 2026/03/26 22:23:26.591165 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw val: "!"
+# 2026/03/26 22:23:26.591167 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw nOps: 1
+# 2026/03/26 22:23:26.591170 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw key: "a"
+# 2026/03/26 22:23:26.591174 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw val: ""
+# 2026/03/26 22:23:26.591176 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw nOps: 1
+# 2026/03/26 22:23:26.591179 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw key: "b"
+# 2026/03/26 22:23:26.591180 [TestStateStore_Property_MultiPeerConvergence] [rapid] draw val: ""
+# 2026/03/26 22:23:26.591192 [TestStateStore_Property_MultiPeerConvergence] peer 1 diverged from peer 0 on key "a": "!" vs ""
+# 
+v0.4.8#14579986930647254343
+0x0
+0x38e38e38e38e4
+0x2
+0x0
+0x0
+0x9867f1f40f739
+0x9
+0x0
+0x0
+0x9867f1f40f780
+0x9
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x38e38e38e3a03
+0x3
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x0
+0x0
+0x0
+0x0
+0x0
+0x1
+0x16
+0x185dca422ad48
+0x420745103850
+0x0
+0x4
+0x1
+0x0
+0x20
+0x11bcc67648ff4d
+0xe3
+0x0
+0x8
+0x0
+0x17
+0x0
+0x23
+0xf3191cf031550
+0x1
+0xaa7d25d3e7bc2
+0x4
+0x0
+0x0
+0x2
+0x0
+0x0
+0x0
+0xb
+0x0
+0x0
+0x1f8ec233c1356
+0x0
+0x0
+0x0
+0x4
+0x0
+0x0
+0x1
+0x1
+0x0

@@ -1,6 +1,7 @@
 package crdt
 
 import (
+	"fmt"
 	"testing"
 
 	"pgregory.net/rapid"
@@ -13,7 +14,10 @@ func TestStateStore_Property_MultiPeerConvergence(t *testing.T) {
 
 		stores := make([]*StateStore, nPeers)
 		for i := 0; i < nPeers; i++ {
-			stores[i] = NewStateStore(rapid.StringMatching(`peer-[a-z]`).Draw(t, "peerID"))
+			// Peer IDs must be unique for CRDT tiebreaking to work correctly.
+			// Use index suffix to guarantee uniqueness.
+			base := rapid.StringMatching(`[a-z]{3,8}`).Draw(t, "peerBase")
+			stores[i] = NewStateStore(fmt.Sprintf("peer-%s-%d", base, i))
 		}
 
 		// Each peer makes some edits
