@@ -1,0 +1,31 @@
+# Cocogitto configuration
+# https://docs.cocogitto.io/
+
+[changelog]
+path = "CHANGELOG.md"
+authors = []
+
+[commit_types]
+feat = { changelog_title = "Features" }
+fix = { changelog_title = "Bug Fixes" }
+docs = { changelog_title = "Documentation" }
+test = { changelog_title = "Tests" }
+refactor = { changelog_title = "Refactoring" }
+perf = { changelog_title = "Performance" }
+style = { changelog_title = "Style" }
+chore = { changelog_title = "Miscellaneous" }
+ci = { changelog_title = "CI/CD" }
+build = { changelog_title = "Build" }
+revert = { changelog_title = "Reverts" }
+
+[allowed_scopes]
+list = [
+    "crdt",
+    "daemon",
+    "transport",
+    "hooks",
+    "tui",
+    "dispatch",
+    "ci",
+    "release",
+]

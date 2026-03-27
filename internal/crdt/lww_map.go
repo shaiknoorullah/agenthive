@@ -9,8 +9,8 @@ import (
 // LWWMap is a map of string keys to LWW-Registers.
 // Safe for concurrent use.
 type LWWMap[T any] struct {
-	mu       sync.RWMutex
-	entries  map[string]*LWWRegister[T]
+	mu      sync.RWMutex
+	entries map[string]*LWWRegister[T]
 }
 
 // NewLWWMap creates a new empty LWW-Map.

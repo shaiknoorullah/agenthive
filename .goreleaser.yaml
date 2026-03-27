@@ -1,0 +1,76 @@
+version: 2
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: 'checksums.txt'
+
+signs:
+  - cmd: cosign
+    signature: "${artifact}.sig"
+    certificate: "${artifact}.pem"
+    args:
+      - "sign-blob"
+      - "--output-signature=${signature}"
+      - "--output-certificate=${certificate}"
+      - "${artifact}"
+      - "--yes"
+    artifacts: checksum
+
+changelog:
+  disable: true  # We use git-cliff for changelog generation
+
+brews:
+  - name: agenthive
+    repository:
+      owner: shaiknoorullah
+      name: homebrew-agenthive
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    homepage: "https://github.com/shaiknoorullah/agenthive"
+    description: "Encrypted P2P mesh for AI agent notification and control"
+    license: "BSL-1.1"
+    dependencies:
+      - name: tmux
+    install: |
+      bin.install "agenthive"
+    test: |
+      system "#{bin}/agenthive", "--version"
+
+nfpms:
+  - id: agenthive
+    package_name: agenthive
+    formats:
+      - deb
+      - rpm
+    vendor: "Shaik Noorullah"
+    maintainer: "Shaik Noorullah"
+    description: "Encrypted P2P mesh for AI agent notification and control"
+    license: "BSL-1.1"
+    homepage: "https://github.com/shaiknoorullah/agenthive"
+    dependencies:
+      - tmux
+    contents:
+      - src: ./LICENSE
+        dst: /usr/share/doc/agenthive/LICENSE
+        type: doc
+
+release:
+  github:
+    owner: shaiknoorullah
+    name: agenthive
+  prerelease: auto
+  draft: false

@@ -1,10 +1,44 @@
 version: 2
 updates:
   - package-ecosystem: gomod
-    directory: /
+    directory: "/"
     schedule:
       interval: weekly
+      day: monday
+    target-branch: develop
+    reviewers:
+      - "shaiknoorullah"
+    labels:
+      - "dependencies"
+      - "go"
+    commit-message:
+      prefix: "deps"
+    open-pull-requests-limit: 10
+
   - package-ecosystem: github-actions
-    directory: /
+    directory: "/"
     schedule:
       interval: weekly
+      day: monday
+    target-branch: develop
+    reviewers:
+      - "shaiknoorullah"
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "ci"
+
+  - package-ecosystem: docker
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    target-branch: develop
+    reviewers:
+      - "shaiknoorullah"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "deps"

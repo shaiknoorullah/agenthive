@@ -20,7 +20,7 @@ var _ = time.Now
 func TestStateStore_SetAndGetPeer(t *testing.T) {
 	store := NewStateStore("peer-a")
 
-	store.SetPeer("server-1", PeerInfo{
+	store.SetPeer("server-1", &PeerInfo{
 		Name:   "server-1",
 		Status: "online",
 		Addr:   "10.0.0.1:19222",
@@ -35,7 +35,7 @@ func TestStateStore_SetAndGetPeer(t *testing.T) {
 func TestStateStore_SetAndGetRoute(t *testing.T) {
 	store := NewStateStore("peer-a")
 
-	store.SetRoute("route-1", RouteRule{
+	store.SetRoute("route-1", &RouteRule{
 		Match:   RouteMatch{Project: "api-server", Priority: "critical"},
 		Targets: []string{"phone", "laptop"},
 	})
@@ -58,8 +58,8 @@ func TestStateStore_SetAndGetConfig(t *testing.T) {
 
 func TestStateStore_ListPeers(t *testing.T) {
 	store := NewStateStore("peer-a")
-	store.SetPeer("s1", PeerInfo{Name: "s1"})
-	store.SetPeer("s2", PeerInfo{Name: "s2"})
+	store.SetPeer("s1", &PeerInfo{Name: "s1"})
+	store.SetPeer("s2", &PeerInfo{Name: "s2"})
 
 	peers := store.ListPeers()
 	assert.Len(t, peers, 2)
@@ -67,8 +67,8 @@ func TestStateStore_ListPeers(t *testing.T) {
 
 func TestStateStore_ListRoutes(t *testing.T) {
 	store := NewStateStore("peer-a")
-	store.SetRoute("r1", RouteRule{Match: RouteMatch{Project: "a"}})
-	store.SetRoute("r2", RouteRule{Match: RouteMatch{Project: "b"}})
+	store.SetRoute("r1", &RouteRule{Match: RouteMatch{Project: "a"}})
+	store.SetRoute("r2", &RouteRule{Match: RouteMatch{Project: "b"}})
 
 	routes := store.ListRoutes()
 	assert.Len(t, routes, 2)
@@ -76,7 +76,7 @@ func TestStateStore_ListRoutes(t *testing.T) {
 
 func TestStateStore_DeleteRoute(t *testing.T) {
 	store := NewStateStore("peer-a")
-	store.SetRoute("r1", RouteRule{Match: RouteMatch{Project: "a"}})
+	store.SetRoute("r1", &RouteRule{Match: RouteMatch{Project: "a"}})
 	store.DeleteRoute("r1")
 
 	_, ok := store.GetRoute("r1")
@@ -87,7 +87,7 @@ func TestStateStore_Merge_TwoStoresConverge(t *testing.T) {
 	storeA := NewStateStore("peer-a")
 	storeB := NewStateStore("peer-b")
 
-	storeA.SetPeer("s1", PeerInfo{Name: "from-a"})
+	storeA.SetPeer("s1", &PeerInfo{Name: "from-a"})
 	storeB.SetConfig("key1", "from-b")
 
 	// Merge using LWWMap-level merge (preserves CRDT timestamps)
@@ -129,9 +129,9 @@ func TestStateStore_Merge_PreservesOriginalTimestamps(t *testing.T) {
 func TestStateStore_Delta_ReturnsSinceLastSync(t *testing.T) {
 	store := NewStateStore("peer-a")
 
-	store.SetPeer("old", PeerInfo{Name: "old"})
+	store.SetPeer("old", &PeerInfo{Name: "old"})
 	since := store.CurrentTimestamp()
-	store.SetPeer("new", PeerInfo{Name: "new"})
+	store.SetPeer("new", &PeerInfo{Name: "new"})
 
 	peersDelta, _, _ := store.DeltaMaps(since)
 
@@ -145,7 +145,7 @@ func TestStateStore_Delta_ReturnsSinceLastSync(t *testing.T) {
 func TestStateStore_Delta_IncludesDeletedEntries(t *testing.T) {
 	store := NewStateStore("peer-a")
 
-	store.SetRoute("r1", RouteRule{Match: RouteMatch{Project: "api"}})
+	store.SetRoute("r1", &RouteRule{Match: RouteMatch{Project: "api"}})
 	since := store.CurrentTimestamp()
 	store.DeleteRoute("r1")
 
@@ -164,8 +164,8 @@ func TestStateStore_SaveAndLoad(t *testing.T) {
 	path := filepath.Join(dir, "state.json")
 
 	store := NewStateStore("peer-a")
-	store.SetPeer("s1", PeerInfo{Name: "s1", Status: "online"})
-	store.SetRoute("r1", RouteRule{Match: RouteMatch{Project: "api"}, Targets: []string{"phone"}})
+	store.SetPeer("s1", &PeerInfo{Name: "s1", Status: "online"})
+	store.SetRoute("r1", &RouteRule{Match: RouteMatch{Project: "api"}, Targets: []string{"phone"}})
 	store.SetConfig("timeout", "1800")
 
 	err := store.SaveToFile(path)
