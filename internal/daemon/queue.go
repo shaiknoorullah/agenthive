@@ -47,7 +47,7 @@ func (q *Queue) Enqueue(peerID string, msg protocol.Message) error {
 	if err != nil {
 		return fmt.Errorf("open queue file: %w", err)
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // best-effort close on deferred path
 
 	if _, err := f.Write(append(data, '\n')); err != nil {
 		return fmt.Errorf("write to queue: %w", err)
@@ -71,7 +71,7 @@ func (q *Queue) Drain(peerID string) ([]protocol.Message, error) {
 		}
 		return nil, fmt.Errorf("open queue file: %w", err)
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // best-effort close on deferred path
 
 	var msgs []protocol.Message
 	scanner := bufio.NewScanner(f)
@@ -91,7 +91,9 @@ func (q *Queue) Drain(peerID string) ([]protocol.Message, error) {
 	}
 
 	// Close file before removing
-	f.Close()
+	if err := f.Close(); err != nil {
+		return nil, fmt.Errorf("close queue file: %w", err)
+	}
 	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 		return nil, fmt.Errorf("remove queue file: %w", err)
 	}
@@ -109,7 +111,7 @@ func (q *Queue) Depth(peerID string) int {
 	if err != nil {
 		return 0
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // best-effort close on read-only file
 
 	count := 0
 	scanner := bufio.NewScanner(f)

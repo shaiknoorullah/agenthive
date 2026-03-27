@@ -263,8 +263,13 @@ func TestLWWRegister_Property_MergeIdempotent(t *testing.T) {
 }
 
 func cloneRegister[T any](src *LWWRegister[T]) *LWWRegister[T] {
-	data, _ := json.Marshal(src)
+	data, err := json.Marshal(src)
+	if err != nil {
+		panic("cloneRegister: marshal failed: " + err.Error())
+	}
 	var dst LWWRegister[T]
-	json.Unmarshal(data, &dst)
+	if err := json.Unmarshal(data, &dst); err != nil {
+		panic("cloneRegister: unmarshal failed: " + err.Error())
+	}
 	return &dst
 }

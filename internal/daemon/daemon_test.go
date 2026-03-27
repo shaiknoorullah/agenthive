@@ -32,9 +32,8 @@ func TestDaemon_StartAndStop(t *testing.T) {
 	d, err := NewDaemon(cfg)
 	require.NoError(t, err)
 
-	errCh := make(chan error, 1)
 	go func() {
-		errCh <- d.Start()
+		_ = d.Start() // error checked via WaitReady and Stop
 	}()
 
 	// Wait for daemon to be ready
@@ -83,9 +82,9 @@ func TestDaemon_Status_Running(t *testing.T) {
 	d, err := NewDaemon(cfg)
 	require.NoError(t, err)
 
-	go d.Start()
+	go func() { _ = d.Start() }()
 	d.WaitReady()
-	defer d.Stop()
+	defer func() { _ = d.Stop() }()
 
 	status := DaemonStatus(cfg)
 	assert.True(t, status.Running)
@@ -102,7 +101,7 @@ func TestDaemon_SavesStateOnStop(t *testing.T) {
 	d, err := NewDaemon(cfg)
 	require.NoError(t, err)
 
-	go d.Start()
+	go func() { _ = d.Start() }()
 	d.WaitReady()
 
 	// Modify state through the store
@@ -127,7 +126,7 @@ func TestDaemon_LoadsStateOnStart(t *testing.T) {
 	// First daemon: set config and stop
 	d1, err := NewDaemon(cfg)
 	require.NoError(t, err)
-	go d1.Start()
+	go func() { _ = d1.Start() }()
 	d1.WaitReady()
 	d1.Store().SetConfig("persist-key", "persist-value")
 	require.NoError(t, d1.Stop())
@@ -135,9 +134,9 @@ func TestDaemon_LoadsStateOnStart(t *testing.T) {
 	// Second daemon: should load persisted state
 	d2, err := NewDaemon(cfg)
 	require.NoError(t, err)
-	go d2.Start()
+	go func() { _ = d2.Start() }()
 	d2.WaitReady()
-	defer d2.Stop()
+	defer func() { _ = d2.Stop() }()
 
 	val, ok := d2.Store().GetConfig("persist-key")
 	assert.True(t, ok)
@@ -149,7 +148,7 @@ func TestDaemon_StaleSocketCleaned(t *testing.T) {
 	sockPath := filepath.Join(dir, "daemon.sock")
 
 	// Create a stale socket file
-	os.WriteFile(sockPath, []byte("stale"), 0600)
+	require.NoError(t, os.WriteFile(sockPath, []byte("stale"), 0600))
 
 	cfg := DaemonConfig{
 		ConfigDir: dir,
@@ -159,9 +158,9 @@ func TestDaemon_StaleSocketCleaned(t *testing.T) {
 	d, err := NewDaemon(cfg)
 	require.NoError(t, err)
 
-	go d.Start()
+	go func() { _ = d.Start() }()
 	d.WaitReady()
-	defer d.Stop()
+	defer func() { _ = d.Stop() }()
 
 	// Daemon should have started despite stale socket
 	status := DaemonStatus(cfg)
@@ -178,9 +177,9 @@ func TestDaemon_IdentityCreatedOnInit(t *testing.T) {
 	d, err := NewDaemon(cfg)
 	require.NoError(t, err)
 
-	go d.Start()
+	go func() { _ = d.Start() }()
 	d.WaitReady()
-	defer d.Stop()
+	defer func() { _ = d.Stop() }()
 
 	// Identity file should exist
 	idPath := filepath.Join(dir, "identity.json")

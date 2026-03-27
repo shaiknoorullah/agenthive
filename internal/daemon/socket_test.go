@@ -29,16 +29,16 @@ func TestSocketListener_AcceptsConnection(t *testing.T) {
 	listener, err := NewSocketListener(sockPath, handler)
 	require.NoError(t, err)
 
-	go listener.Serve()
-	defer listener.Close()
+	go func() { _ = listener.Serve() }()
+	defer func() { _ = listener.Close() }()
 
 	// Wait for listener to be ready
 	time.Sleep(50 * time.Millisecond)
 
 	// Connect and send a message
-	conn, err := net.Dial("unix", sockPath)
+	conn, err := net.Dial("unix", sockPath) //nolint:noctx // acceptable in tests
 	require.NoError(t, err)
-	defer conn.Close()
+	defer conn.Close() //nolint:errcheck // test cleanup
 
 	msg := protocol.Message{
 		ID:       "test-1",
@@ -81,14 +81,14 @@ func TestSocketListener_MultipleMessages(t *testing.T) {
 	listener, err := NewSocketListener(sockPath, handler)
 	require.NoError(t, err)
 
-	go listener.Serve()
-	defer listener.Close()
+	go func() { _ = listener.Serve() }()
+	defer func() { _ = listener.Close() }()
 
 	time.Sleep(50 * time.Millisecond)
 
-	conn, err := net.Dial("unix", sockPath)
+	conn, err := net.Dial("unix", sockPath) //nolint:noctx // acceptable in tests
 	require.NoError(t, err)
-	defer conn.Close()
+	defer conn.Close() //nolint:errcheck // test cleanup
 
 	for i := 0; i < 3; i++ {
 		msg := protocol.Message{
@@ -129,14 +129,14 @@ func TestSocketListener_MultipleConnections(t *testing.T) {
 	listener, err := NewSocketListener(sockPath, handler)
 	require.NoError(t, err)
 
-	go listener.Serve()
-	defer listener.Close()
+	go func() { _ = listener.Serve() }()
+	defer func() { _ = listener.Close() }()
 
 	time.Sleep(50 * time.Millisecond)
 
 	// Two separate connections
 	for i := 0; i < 2; i++ {
-		conn, err := net.Dial("unix", sockPath)
+		conn, err := net.Dial("unix", sockPath) //nolint:noctx // acceptable in tests
 		require.NoError(t, err)
 
 		msg := protocol.Message{
@@ -152,7 +152,7 @@ func TestSocketListener_MultipleConnections(t *testing.T) {
 		data, _ := json.Marshal(msg)
 		_, err = conn.Write(append(data, '\n'))
 		require.NoError(t, err)
-		conn.Close()
+		_ = conn.Close() // best-effort close in loop
 	}
 
 	time.Sleep(100 * time.Millisecond)
@@ -171,17 +171,17 @@ func TestSocketListener_Close_StopsAccepting(t *testing.T) {
 	listener, err := NewSocketListener(sockPath, handler)
 	require.NoError(t, err)
 
-	go listener.Serve()
+	go func() { _ = listener.Serve() }()
 
 	time.Sleep(50 * time.Millisecond)
 
 	// Close the listener
-	listener.Close()
+	_ = listener.Close()
 
 	time.Sleep(50 * time.Millisecond)
 
 	// Connections should be refused
-	_, err = net.Dial("unix", sockPath)
+	_, err = net.Dial("unix", sockPath) //nolint:noctx // acceptable in tests
 	assert.Error(t, err)
 }
 
@@ -201,14 +201,14 @@ func TestSocketListener_InvalidJSON_DoesNotCrash(t *testing.T) {
 	listener, err := NewSocketListener(sockPath, handler)
 	require.NoError(t, err)
 
-	go listener.Serve()
-	defer listener.Close()
+	go func() { _ = listener.Serve() }()
+	defer func() { _ = listener.Close() }()
 
 	time.Sleep(50 * time.Millisecond)
 
-	conn, err := net.Dial("unix", sockPath)
+	conn, err := net.Dial("unix", sockPath) //nolint:noctx // acceptable in tests
 	require.NoError(t, err)
-	defer conn.Close()
+	defer conn.Close() //nolint:errcheck // test cleanup
 
 	// Send invalid JSON followed by valid message
 	_, err = conn.Write([]byte("not valid json\n"))
@@ -244,7 +244,7 @@ func TestSocketListener_SocketPath(t *testing.T) {
 
 	listener, err := NewSocketListener(sockPath, handler)
 	require.NoError(t, err)
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 
 	assert.Equal(t, sockPath, listener.Path())
 }

@@ -2,7 +2,9 @@ package daemon
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -29,15 +31,19 @@ type SocketListener struct {
 // Removes any existing socket file before binding.
 func NewSocketListener(path string, handler MessageHandler) (*SocketListener, error) {
 	// Remove stale socket
-	os.Remove(path)
+	_ = os.Remove(path) // best-effort cleanup of stale socket
 
-	ln, err := net.Listen("unix", path)
+	lc := net.ListenConfig{}
+	ln, err := lc.Listen(context.Background(), "unix", path)
 	if err != nil {
 		return nil, err
 	}
 
 	// Set socket permissions to owner-only
-	os.Chmod(path, 0600)
+	if err := os.Chmod(path, 0600); err != nil {
+		_ = ln.Close() // best-effort cleanup
+		return nil, fmt.Errorf("set socket permissions: %w", err)
+	}
 
 	return &SocketListener{
 		path:     path,
@@ -68,7 +74,7 @@ func (s *SocketListener) Serve() error {
 // handleConn reads newline-delimited JSON messages from a connection.
 func (s *SocketListener) handleConn(conn net.Conn) {
 	defer s.wg.Done()
-	defer conn.Close()
+	defer conn.Close() //nolint:errcheck // best-effort close on connection teardown
 
 	scanner := bufio.NewScanner(conn)
 	for scanner.Scan() {
@@ -90,7 +96,7 @@ func (s *SocketListener) Close() error {
 	close(s.closed)
 	err := s.listener.Close()
 	s.wg.Wait()
-	os.Remove(s.path)
+	_ = os.Remove(s.path) // best-effort cleanup of socket file
 	return err
 }
 

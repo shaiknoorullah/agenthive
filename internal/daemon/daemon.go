@@ -104,7 +104,7 @@ func (d *Daemon) Start() error {
 	// Write PID file
 	pidPath := filepath.Join(d.cfg.ConfigDir, "daemon.pid")
 	if err := os.WriteFile(pidPath, []byte(strconv.Itoa(os.Getpid())), 0600); err != nil {
-		d.socket.Close()
+		_ = d.socket.Close() // best-effort cleanup
 		return fmt.Errorf("write PID file: %w", err)
 	}
 
@@ -112,7 +112,11 @@ func (d *Daemon) Start() error {
 	close(d.ready)
 
 	// Serve socket in background
-	go d.socket.Serve()
+	go func() {
+		if err := d.socket.Serve(); err != nil {
+			log.Printf("socket serve error: %v", err)
+		}
+	}()
 
 	// Wait for stop signal
 	<-d.stop
@@ -139,7 +143,9 @@ func (d *Daemon) Stop() error {
 
 	// Close socket listener
 	if d.socket != nil {
-		d.socket.Close()
+		if err := d.socket.Close(); err != nil {
+			log.Printf("warning: could not close socket: %v", err)
+		}
 	}
 
 	// Save CRDT state
@@ -152,7 +158,7 @@ func (d *Daemon) Stop() error {
 
 	// Remove PID file
 	pidPath := filepath.Join(d.cfg.ConfigDir, "daemon.pid")
-	os.Remove(pidPath)
+	_ = os.Remove(pidPath) // best-effort cleanup
 
 	return nil
 }
@@ -221,7 +227,7 @@ func DaemonStatus(cfg DaemonConfig) Status {
 	// On Unix, FindProcess always succeeds. Send signal 0 to check if alive.
 	if err := proc.Signal(syscall.Signal(0)); err != nil {
 		// Process is not running, clean up stale PID file
-		os.Remove(pidPath)
+		_ = os.Remove(pidPath) // best-effort cleanup
 		return Status{Running: false}
 	}
 

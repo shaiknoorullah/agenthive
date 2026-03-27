@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestStore(peerID string) *crdt.StateStore {
-	return crdt.NewStateStore(peerID)
+func newTestStore() *crdt.StateStore {
+	return crdt.NewStateStore("peer-a")
 }
 
 func TestRouter_MatchesByProject(t *testing.T) {
-	store := newTestStore("peer-a")
+	store := newTestStore()
 	store.SetRoute("r1", &crdt.RouteRule{
 		Match:   crdt.RouteMatch{Project: "api-server"},
 		Targets: []string{"phone", "laptop"},
@@ -37,7 +37,7 @@ func TestRouter_MatchesByProject(t *testing.T) {
 }
 
 func TestRouter_MatchesBySource(t *testing.T) {
-	store := newTestStore("peer-a")
+	store := newTestStore()
 	store.SetRoute("r1", &crdt.RouteRule{
 		Match:   crdt.RouteMatch{Source: "Codex"},
 		Targets: []string{"desktop-only"},
@@ -60,7 +60,7 @@ func TestRouter_MatchesBySource(t *testing.T) {
 }
 
 func TestRouter_MatchesByPriority(t *testing.T) {
-	store := newTestStore("peer-a")
+	store := newTestStore()
 	store.SetRoute("r1", &crdt.RouteRule{
 		Match:   crdt.RouteMatch{Priority: "critical"},
 		Targets: []string{"ALL"},
@@ -89,7 +89,7 @@ func TestRouter_MatchesByPriority(t *testing.T) {
 }
 
 func TestRouter_MatchesBySession(t *testing.T) {
-	store := newTestStore("peer-a")
+	store := newTestStore()
 	store.SetRoute("r1", &crdt.RouteRule{
 		Match:   crdt.RouteMatch{Session: "refactor"},
 		Targets: []string{"telegram"},
@@ -113,7 +113,7 @@ func TestRouter_MatchesBySession(t *testing.T) {
 }
 
 func TestRouter_MultipleRulesMatch(t *testing.T) {
-	store := newTestStore("peer-a")
+	store := newTestStore()
 	store.SetRoute("r1", &crdt.RouteRule{
 		Match:   crdt.RouteMatch{Project: "api"},
 		Targets: []string{"phone"},
@@ -142,7 +142,7 @@ func TestRouter_MultipleRulesMatch(t *testing.T) {
 }
 
 func TestRouter_DefaultRuleCatchesUnmatched(t *testing.T) {
-	store := newTestStore("peer-a")
+	store := newTestStore()
 	store.SetRoute("r1", &crdt.RouteRule{
 		Match:   crdt.RouteMatch{Project: "api"},
 		Targets: []string{"phone"},
@@ -169,7 +169,7 @@ func TestRouter_DefaultRuleCatchesUnmatched(t *testing.T) {
 }
 
 func TestRouter_NoRulesMatch_ReturnsEmpty(t *testing.T) {
-	store := newTestStore("peer-a")
+	store := newTestStore()
 	store.SetRoute("r1", &crdt.RouteRule{
 		Match:   crdt.RouteMatch{Project: "api"},
 		Targets: []string{"phone"},
@@ -192,7 +192,7 @@ func TestRouter_NoRulesMatch_ReturnsEmpty(t *testing.T) {
 }
 
 func TestRouter_MultiFieldMatch_AllFieldsMustMatch(t *testing.T) {
-	store := newTestStore("peer-a")
+	store := newTestStore()
 	store.SetRoute("r1", &crdt.RouteRule{
 		Match:   crdt.RouteMatch{Project: "api", Source: "Claude"},
 		Targets: []string{"phone"},
@@ -216,7 +216,7 @@ func TestRouter_MultiFieldMatch_AllFieldsMustMatch(t *testing.T) {
 }
 
 func TestRouter_ActionRequest_RoutedByProject(t *testing.T) {
-	store := newTestStore("peer-a")
+	store := newTestStore()
 	store.SetRoute("r1", &crdt.RouteRule{
 		Match:   crdt.RouteMatch{Project: "api"},
 		Targets: []string{"phone"},
@@ -241,7 +241,7 @@ func TestRouter_ActionRequest_RoutedByProject(t *testing.T) {
 }
 
 func TestRouter_DuplicateTargetsDeduped(t *testing.T) {
-	store := newTestStore("peer-a")
+	store := newTestStore()
 	store.SetRoute("r1", &crdt.RouteRule{
 		Match:   crdt.RouteMatch{Project: "api"},
 		Targets: []string{"phone", "laptop"},
@@ -270,7 +270,7 @@ func TestRouter_DuplicateTargetsDeduped(t *testing.T) {
 }
 
 func TestRouter_ExcludesSelf(t *testing.T) {
-	store := newTestStore("peer-a")
+	store := newTestStore()
 	store.SetRoute("r1", &crdt.RouteRule{
 		Match:   crdt.RouteMatch{Project: "api"},
 		Targets: []string{"peer-a", "phone"},
