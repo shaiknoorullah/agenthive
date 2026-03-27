@@ -22,20 +22,20 @@ const (
 	MsgPeerAnnounce   = protocol.MsgPeerAnnounce
 )
 
-// Transport-specific message types.
+// Transport-specific message types (add to protocol/messages.go)
 const (
-	MsgPeerQuery MessageType = ""
-	MsgPeerState MessageType = ""
+	MsgPeerQuery MessageType = "peer_query"
+	MsgPeerState MessageType = "peer_state"
 )
 
 // LinkStatus represents the current state of a link.
 type LinkStatus string
 
 const (
-	StatusConnecting   LinkStatus = ""
-	StatusConnected    LinkStatus = ""
-	StatusDisconnected LinkStatus = ""
-	StatusError        LinkStatus = ""
+	StatusConnecting   LinkStatus = "connecting"
+	StatusConnected    LinkStatus = "connected"
+	StatusDisconnected LinkStatus = "disconnected"
+	StatusError        LinkStatus = "error"
 )
 
 // Envelope is the framing wrapper for all messages sent over links.
