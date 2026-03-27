@@ -1,0 +1,12 @@
+ agenthive 
+
+   [p]eers    [r]outes    [a]ctions    [l]ogs   
+  ────────────────────────────────────────────────────────────
+  1 pending action(s)
+
+  [14:30] Claude/api-server wants to run:
+    $ rm -rf /tmp/build
+    [y] Allow  [n] Deny
+
+
+  [p]eers [r]outes [a]ctions [l]ogs  |  [q]uit
