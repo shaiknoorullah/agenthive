@@ -1,0 +1,6 @@
+  SELECTOR                       ->    TARGETS
+  ------------------------------------------------------------
+  project:api-server              ->  phone, laptop
+  session:refactor                ->  telegram
+  priority:critical               ->  ALL
+  source:Codex                    ->  desktop-only
