@@ -8,6 +8,7 @@
 # Test
 coverage.out
 transport_coverage.out
+hooks_coverage.out
 *.test
 
 # IDE
