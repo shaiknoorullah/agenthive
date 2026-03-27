@@ -21,21 +21,23 @@ go test -race ./...
 We use a two-branch model:
 
 - **`main`** -- stable releases only. Never commit directly to main.
-- **`develop`** -- integration branch. All feature PRs target develop.
+- **`develop`** -- integration branch. Never commit directly to develop.
 
-When `develop` is stable and tested, it gets merged into `main` as a release.
+Every change -- features, fixes, docs, tests, refactors, chores -- goes through a branch and PR. No exceptions.
+
+When `develop` is stable and tested, it gets merged into `main` via PR as a release.
 
 ```
 main      ----o--------------------------o---- (stable releases)
                \                        /
 develop    -----o---o---o---o---o---o---o----- (integration)
-                 \     / \     /
-feature branches  o---o   o---o
+                 \     / \     / \     /
+branches          o---o   o---o   o---o
 ```
 
 ### Workflow
 
-1. Create a feature branch off `develop`: `git checkout -b feat/my-feature develop`
+1. Create a branch off `develop`: `git checkout -b <type>/description develop`
 2. Write tests first (we use TDD)
 3. Implement your changes
 4. Run the full suite: `go test -race -count=1 ./...`
@@ -43,7 +45,9 @@ feature branches  o---o   o---o
 6. Push and open a PR targeting `develop`
 7. After review and CI passes, merge into `develop`
 
-**Do not open PRs directly against `main`** unless it's a hotfix for a production issue.
+Branch naming: `feat/`, `fix/`, `docs/`, `test/`, `refactor/`, `chore/` prefixes.
+
+**No direct commits to `develop` or `main`.** The only exception: hotfixes for production issues can PR directly to `main`.
 
 ## Commit Convention
 
