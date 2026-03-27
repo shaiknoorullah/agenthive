@@ -7,7 +7,7 @@
 [![CI](https://github.com/shaiknoorullah/agenthive/actions/workflows/ci.yml/badge.svg)](https://github.com/shaiknoorullah/agenthive/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/shaiknoorullah/agenthive)](https://goreportcard.com/report/github.com/shaiknoorullah/agenthive)
 [![Go Reference](https://pkg.go.dev/badge/github.com/shaiknoorullah/agenthive.svg)](https://pkg.go.dev/github.com/shaiknoorullah/agenthive)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: BSL 1.1](https://img.shields.io/badge/license-BSL%201.1-orange.svg)](LICENSE)
 [![GitHub Release](https://img.shields.io/github/v/release/shaiknoorullah/agenthive?sort=semver)](https://github.com/shaiknoorullah/agenthive/releases)
 
 Get notifications, approve actions, and control your AI coding agents from anywhere --

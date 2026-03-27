@@ -87,4 +87,4 @@ Before proposing architectural changes, read the design documents in `docs/rfcs/
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the MIT License.
+By contributing, you agree that your contributions will be licensed under the Business Source License 1.1 (BSL 1.1). After 4 years from each release date, that version automatically converts to the Apache License 2.0. See [LICENSE](LICENSE) for full terms.
