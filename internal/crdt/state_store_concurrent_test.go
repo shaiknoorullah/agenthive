@@ -72,7 +72,7 @@ func TestStateStore_ConcurrentOperations(t *testing.T) {
 		wg.Add(3)
 		go func(i int) {
 			defer wg.Done()
-			store.SetPeer(fmt.Sprintf("p%d", i%5), PeerInfo{Name: fmt.Sprintf("peer-%d", i)})
+			store.SetPeer(fmt.Sprintf("p%d", i%5), &PeerInfo{Name: fmt.Sprintf("peer-%d", i)})
 		}(i)
 		go func(i int) {
 			defer wg.Done()
@@ -80,7 +80,7 @@ func TestStateStore_ConcurrentOperations(t *testing.T) {
 		}(i)
 		go func(i int) {
 			defer wg.Done()
-			store.SetRoute(fmt.Sprintf("r%d", i%5), RouteRule{
+			store.SetRoute(fmt.Sprintf("r%d", i%5), &RouteRule{
 				Match: RouteMatch{Project: fmt.Sprintf("proj-%d", i)},
 			})
 		}(i)

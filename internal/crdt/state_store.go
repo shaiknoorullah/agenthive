@@ -66,8 +66,8 @@ func NewStateStore(peerID string) *StateStore {
 	}
 }
 
-func (s *StateStore) SetPeer(id string, info PeerInfo) {
-	s.peers.Set(id, info, s.clock.Now())
+func (s *StateStore) SetPeer(id string, info *PeerInfo) {
+	s.peers.Set(id, *info, s.clock.Now())
 }
 
 func (s *StateStore) GetPeer(id string) (PeerInfo, bool) {
@@ -84,8 +84,8 @@ func (s *StateStore) ListPeers() map[string]PeerInfo {
 	return result
 }
 
-func (s *StateStore) SetRoute(id string, rule RouteRule) {
-	s.routes.Set(id, rule, s.clock.Now())
+func (s *StateStore) SetRoute(id string, rule *RouteRule) {
+	s.routes.Set(id, *rule, s.clock.Now())
 }
 
 func (s *StateStore) GetRoute(id string) (RouteRule, bool) {
