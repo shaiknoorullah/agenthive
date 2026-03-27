@@ -2,15 +2,19 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
   pull_request:
-    branches: [main]
+    branches: [develop]
+
+permissions:
+  contents: read
 
 jobs:
   test:
-    name: Test
+    name: Test (Go ${{ matrix.go }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
         go: ['1.22']
@@ -20,18 +24,15 @@ jobs:
         with:
           go-version: ${{ matrix.go }}
       - run: go build ./...
-      - run: go test -race -count=1 ./...
+      - run: go test -race -count=1 -coverprofile=coverage.txt -covermode=atomic ./...
       - run: go vet ./...
-
-  fuzz:
-    name: Fuzz
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest'
+        uses: codecov/codecov-action@v5
         with:
-          go-version: '1.22'
-      - run: go test -fuzz=Fuzz -fuzztime=30s ./internal/crdt/...
+          files: coverage.txt
+          flags: unittests
+          fail_ci_if_error: false
 
   lint:
     name: Lint
@@ -44,3 +45,36 @@ jobs:
       - uses: golangci/golangci-lint-action@v6
         with:
           version: latest
+
+  fuzz:
+    name: Fuzz
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - run: go test -fuzz=Fuzz -fuzztime=30s ./internal/crdt/...
+
+  govulncheck:
+    name: Vulnerability Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - run: govulncheck ./...
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
