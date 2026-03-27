@@ -1,0 +1,56 @@
+name: Release PR
+
+on:
+  push:
+    branches: [develop]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release-pr:
+    name: Update Release PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install git-cliff
+        uses: taiki-e/install-action@git-cliff
+
+      - name: Compute next version
+        id: version
+        run: |
+          NEXT=$(git cliff --bumped-version 2>/dev/null || echo "v0.1.0")
+          echo "version=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "Computed next version: $NEXT"
+
+      - name: Generate changelog preview
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          git cliff --unreleased --tag "$VERSION" --strip header > RELEASE_BODY.md
+          echo "" >> RELEASE_BODY.md
+          echo "---" >> RELEASE_BODY.md
+          echo "" >> RELEASE_BODY.md
+          echo "_This PR was auto-generated. Merge it to create release \`$VERSION\`._" >> RELEASE_BODY.md
+
+      - name: Create or update Release PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          TITLE="release: $VERSION"
+          BODY=$(cat RELEASE_BODY.md)
+
+          # Check if a release PR already exists
+          EXISTING_PR=$(gh pr list --base main --head develop --json number --jq '.[0].number // empty')
+
+          if [ -n "$EXISTING_PR" ]; then
+            echo "Updating existing PR #$EXISTING_PR"
+            gh pr edit "$EXISTING_PR" --title "$TITLE" --body "$BODY"
+          else
+            echo "Creating new Release PR"
+            gh pr create --base main --head develop --title "$TITLE" --body "$BODY"
+          fi
