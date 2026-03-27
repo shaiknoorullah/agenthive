@@ -80,6 +80,36 @@ Before proposing architectural changes, read the design documents in `docs/rfcs/
 - Keep functions focused
 - Prefer clear names over comments
 
+## Signed Commits
+
+All commits must be GPG-signed. GitHub shows a "Verified" badge on signed commits.
+
+### Setup
+
+1. Generate a GPG key (RSA 4096, email must match your GitHub account):
+   ```bash
+   gpg --full-generate-key
+   ```
+
+2. Get your key ID:
+   ```bash
+   gpg --list-secret-keys --keyid-format long
+   ```
+   The key ID is after `rsa4096/` (e.g., `rsa4096/ABC123DEF456` -> key ID is `ABC123DEF456`).
+
+3. Add the public key to your GitHub account:
+   ```bash
+   gpg --armor --export YOUR_KEY_ID
+   ```
+   Copy the output and paste it at https://github.com/settings/gpg/new
+
+4. Configure git to sign commits:
+   ```bash
+   git config --global user.signingkey YOUR_KEY_ID
+   git config --global commit.gpgsign true
+   git config --global tag.gpgsign true
+   ```
+
 ## Reporting Issues
 
 - **Bugs**: use the bug report template. Include OS, tmux version, steps to reproduce.
