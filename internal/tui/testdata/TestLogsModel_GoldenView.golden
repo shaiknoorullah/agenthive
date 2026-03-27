@@ -1,0 +1,7 @@
+  Total: 3  |  Critical: 1  Warning: 1  Info: 1
+
+  [14:30] Claude/api-server: Task failed
+  [14:31] Claude/frontend: Agent has finished
+  [14:32] Codex/docs: Needs approval
+
+  Filter: [1]critical [2]warning [3]info  |  Scroll: up/down
