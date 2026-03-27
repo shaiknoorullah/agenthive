@@ -4,25 +4,46 @@ Thanks for your interest in contributing to agenthive.
 
 ## Getting Started
 
-1. Fork the repo and create your branch from `main`
+1. Fork the repo and create your branch from `develop`
 2. Set up locally:
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/agenthive.git
 cd agenthive
+git checkout develop
 go mod download
 go build ./...
 go test -race ./...
 ```
 
-## Development Workflow
+## Branch Strategy
 
-1. Create a feature branch: `git checkout -b feat/my-feature`
+We use a two-branch model:
+
+- **`main`** -- stable releases only. Never commit directly to main.
+- **`develop`** -- integration branch. All feature PRs target develop.
+
+When `develop` is stable and tested, it gets merged into `main` as a release.
+
+```
+main      ----o--------------------------o---- (stable releases)
+               \                        /
+develop    -----o---o---o---o---o---o---o----- (integration)
+                 \     / \     /
+feature branches  o---o   o---o
+```
+
+### Workflow
+
+1. Create a feature branch off `develop`: `git checkout -b feat/my-feature develop`
 2. Write tests first (we use TDD)
 3. Implement your changes
 4. Run the full suite: `go test -race -count=1 ./...`
 5. Commit with a clear message
-6. Push and open a pull request
+6. Push and open a PR targeting `develop`
+7. After review and CI passes, merge into `develop`
+
+**Do not open PRs directly against `main`** unless it's a hotfix for a production issue.
 
 ## Commit Convention
 
