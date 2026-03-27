@@ -60,14 +60,11 @@ jobs:
   govulncheck:
     name: Vulnerability Check
     runs-on: ubuntu-latest
-    # Non-blocking: reports vulns as warnings. Windows-only stdlib vulns
-    # in Go 1.22 cause false positives for this Linux/macOS-only project.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.24'
       - name: Install govulncheck
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
       - name: Run govulncheck
