@@ -109,13 +109,14 @@ func (h *HLC) Update(remote Timestamp) Timestamp {
 
 	now := h.wallFn().UTC().Truncate(time.Millisecond)
 
-	if now.After(h.last.Wall) && now.After(remote.Wall) {
+	switch {
+	case now.After(h.last.Wall) && now.After(remote.Wall):
 		h.last = Timestamp{Wall: now, Counter: 0, PeerID: h.peerID}
-	} else if h.last.Wall.After(remote.Wall) || h.last.Wall.Equal(remote.Wall) && h.last.Wall.After(now) {
+	case h.last.Wall.After(remote.Wall) || h.last.Wall.Equal(remote.Wall) && h.last.Wall.After(now):
 		h.last = Timestamp{Wall: h.last.Wall, Counter: h.last.Counter + 1, PeerID: h.peerID}
-	} else if remote.Wall.After(h.last.Wall) {
+	case remote.Wall.After(h.last.Wall):
 		h.last = Timestamp{Wall: remote.Wall, Counter: remote.Counter + 1, PeerID: h.peerID}
-	} else {
+	default:
 		// h.last.Wall == remote.Wall
 		counter := h.last.Counter
 		if remote.Counter > counter {
