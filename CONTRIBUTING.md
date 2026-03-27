@@ -35,6 +35,21 @@ develop    -----o---o---o---o---o---o---o----- (integration)
 branches          o---o   o---o   o---o
 ```
 
+### Merge Strategy
+
+- **Feature branches -> develop:** Squash or merge commit (contributor's choice)
+- **develop -> main (Release PR):** Always **merge commit** (no squash, no rebase). Individual commits must be preserved so git-cliff can generate grouped changelogs from conventional commit types.
+
+### Release Flow
+
+Releases are automated via a Release PR:
+
+1. As commits land on `develop`, CI auto-creates/updates a Release PR targeting `main`
+2. The PR shows: computed next version, changelog preview, commit list
+3. Release-gate checks run automatically on the PR (full test suite + cross-compile + security)
+4. When ready to ship, merge the Release PR
+5. Merge to `main` triggers the release pipeline: changelog finalized, tag created, binaries built, GitHub Release published
+
 ### Workflow
 
 1. Create a branch off `develop`: `git checkout -b <type>/description develop`
@@ -45,20 +60,41 @@ branches          o---o   o---o   o---o
 6. Push and open a PR targeting `develop`
 7. After review and CI passes, merge into `develop`
 
-Branch naming: `feat/`, `fix/`, `docs/`, `test/`, `refactor/`, `chore/` prefixes.
+Branch naming: `feat/`, `fix/`, `docs/`, `test/`, `refactor/`, `chore/`, `build/`, `ci/`, `perf/`, `style/`, `revert/` prefixes.
 
 **No direct commits to `develop` or `main`.** The only exception: hotfixes for production issues can PR directly to `main`.
 
 ## Commit Convention
 
-We follow [Conventional Commits](https://www.conventionalcommits.org/):
+We follow [Conventional Commits](https://www.conventionalcommits.org/). Commit messages are validated by a `commit-msg` hook via lefthook + cocogitto.
+
+Use `cog commit` for interactive guided prompts, or write manually:
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+**Types:**
 
 - `feat:` new feature
 - `fix:` bug fix
 - `docs:` documentation
 - `test:` adding or updating tests
-- `refactor:` code restructuring
-- `chore:` maintenance
+- `refactor:` code restructuring (no behavior change)
+- `perf:` performance improvement
+- `style:` formatting, whitespace (no code change)
+- `chore:` maintenance, dependencies, tooling
+- `ci:` CI/CD configuration
+- `build:` build system, compilation, packaging
+- `revert:` reverting a previous commit
+
+**Scopes** (optional): `crdt`, `daemon`, `transport`, `hooks`, `tui`, `dispatch`, `ci`, `release`
+
+**Breaking changes:** Add `!` after the type/scope (e.g., `feat(transport)!: change envelope format`) or include `BREAKING CHANGE:` in the footer.
 
 ## Architecture Decisions
 
