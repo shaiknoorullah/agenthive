@@ -46,7 +46,8 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.22'
-      - run: go test -fuzz=Fuzz -fuzztime=2m ./internal/crdt/...
+      - run: go test -fuzz=FuzzLWWMapJSONRoundTrip -fuzztime=1m ./internal/crdt/...
+      - run: go test -fuzz=FuzzTimestampJSONRoundTrip -fuzztime=1m ./internal/crdt/...
 
   govulncheck:
     name: Vulnerability Check
