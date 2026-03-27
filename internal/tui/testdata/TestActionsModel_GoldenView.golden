@@ -1,0 +1,9 @@
+  2 pending action(s)
+
+  [14:30] Claude/api-server wants to run:
+    $ rm -rf /tmp/build
+    [y] Allow  [n] Deny
+
+  [14:32] Codex/docs-gen wants to run:
+    $ npm run build
+

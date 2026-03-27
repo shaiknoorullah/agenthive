@@ -169,15 +169,25 @@ func TestLWWMap_Property_MergeCommutative(t *testing.T) {
 		}
 
 		// merge(A,B)
-		abData, _ := json.Marshal(mapA)
+		abData, err := json.Marshal(mapA)
+		if err != nil {
+			t.Fatalf("marshal mapA: %v", err)
+		}
 		var ab LWWMap[string]
-		json.Unmarshal(abData, &ab)
+		if err := json.Unmarshal(abData, &ab); err != nil {
+			t.Fatalf("unmarshal mapA clone: %v", err)
+		}
 		ab.Merge(mapB)
 
 		// merge(B,A)
-		baData, _ := json.Marshal(mapB)
+		baData, err := json.Marshal(mapB)
+		if err != nil {
+			t.Fatalf("marshal mapB: %v", err)
+		}
 		var ba LWWMap[string]
-		json.Unmarshal(baData, &ba)
+		if err := json.Unmarshal(baData, &ba); err != nil {
+			t.Fatalf("unmarshal mapB clone: %v", err)
+		}
 		ba.Merge(mapA)
 
 		// All keys should have same values
@@ -223,9 +233,14 @@ func TestLWWMap_Property_MergeAssociative(t *testing.T) {
 		}
 
 		cloneMap := func(m *LWWMap[string]) *LWWMap[string] {
-			data, _ := json.Marshal(m)
+			data, err := json.Marshal(m)
+			if err != nil {
+				t.Fatalf("marshal for clone: %v", err)
+			}
 			var c LWWMap[string]
-			json.Unmarshal(data, &c)
+			if err := json.Unmarshal(data, &c); err != nil {
+				t.Fatalf("unmarshal for clone: %v", err)
+			}
 			return &c
 		}
 

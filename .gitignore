@@ -1,5 +1,5 @@
 # Binaries
-agenthive
+/agenthive
 *.exe
 *.dll
 *.so
@@ -7,6 +7,9 @@ agenthive
 
 # Test
 coverage.out
+transport_coverage.out
+hooks_coverage.out
+coverage-tui.out
 *.test
 
 # IDE
