@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"bytes"
 	"errors"
 	"io"
 	"net"
@@ -195,7 +196,7 @@ func TestNoiseHandshake_PeerVerification_Accepted(t *testing.T) {
 
 	// Verifier that accepts the known key
 	verifier := func(remoteKey []byte) error {
-		if string(remoteKey) != string(responderKey.Public) {
+		if !bytes.Equal(remoteKey, responderKey.Public) {
 			return io.ErrUnexpectedEOF
 		}
 		return nil

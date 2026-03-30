@@ -58,8 +58,7 @@ func (c *SSHLinkConfig) SSHArgs(relayCmd string) []string {
 	if c.RemoteUser != "" {
 		dest = c.RemoteUser + "@" + c.RemoteHost
 	}
-	args = append(args, dest)
-	args = append(args, relayCmd)
+	args = append(args, dest, relayCmd)
 
 	return args
 }
