@@ -22,6 +22,13 @@ linters:
     - bodyclose
     - noctx
     - prealloc
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - unparam
+          - noctx
 
 linters-settings:
   gocritic:
@@ -34,10 +41,3 @@ linters-settings:
       - opinionated
   misspell:
     locale: US
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - unparam
