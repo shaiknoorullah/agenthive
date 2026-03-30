@@ -11,10 +11,10 @@ import (
 
 func TestSSHLinkConfig_Validate_Valid(t *testing.T) {
 	cfg := SSHLinkConfig{
-		RemoteUser: "deploy",
-		RemoteHost: "server-01",
-		RemotePort: 22,
-		PeerID:     "peer-server",
+		RemoteUser:   "deploy",
+		RemoteHost:   "server-01",
+		RemotePort:   22,
+		PeerID:       "peer-server",
 		IdentityFile: "/home/user/.ssh/id_ed25519",
 	}
 	assert.NoError(t, cfg.Validate())

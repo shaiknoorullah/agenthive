@@ -22,7 +22,7 @@ type TCPLink struct {
 
 // DialTCPLink connects to a remote peer and performs a Noise handshake as initiator.
 func DialTCPLink(addr string, localKey *NoiseKeypair, remotePeerID string, verify PeerVerifier) (*TCPLink, error) {
-	conn, err := net.Dial("tcp", addr)
+	conn, err := net.Dial("tcp", addr) //nolint:noctx // connection lifecycle managed via Close()
 	if err != nil {
 		return nil, fmt.Errorf("tcp dial: %w", err)
 	}
@@ -41,7 +41,7 @@ func NewTCPLinkFromConn(conn net.Conn, localKey *NoiseKeypair, remotePeerID stri
 		nconn, err = NoiseHandshakeResponder(conn, localKey, verify)
 	}
 	if err != nil {
-		conn.Close()
+		_ = conn.Close()
 		return nil, fmt.Errorf("noise handshake: %w", err)
 	}
 

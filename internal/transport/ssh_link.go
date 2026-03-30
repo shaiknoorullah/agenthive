@@ -96,7 +96,7 @@ func NewSSHLink(cfg SSHLinkConfig) (*SSHLink, error) {
 // The command's stdin/stdout carry newline-delimited JSON messages.
 // This is used by tests to inject "cat" or other mock commands.
 func NewSSHLinkFromCommand(command string, args []string, peerID string) (*SSHLink, error) {
-	cmd := exec.Command(command, args...)
+	cmd := exec.Command(command, args...) //nolint:noctx // long-lived subprocess managed via Close()
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
@@ -105,12 +105,12 @@ func NewSSHLinkFromCommand(command string, args []string, peerID string) (*SSHLi
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		stdin.Close()
+		_ = stdin.Close()
 		return nil, fmt.Errorf("ssh link stdout pipe: %w", err)
 	}
 
 	if err := cmd.Start(); err != nil {
-		stdin.Close()
+		_ = stdin.Close()
 		return nil, fmt.Errorf("ssh link start command: %w", err)
 	}
 
@@ -149,7 +149,7 @@ func (sl *SSHLink) readLoop(stdout io.Reader) {
 }
 
 func (sl *SSHLink) waitLoop() {
-	sl.cmd.Wait()
+	_ = sl.cmd.Wait()
 
 	sl.mu.Lock()
 	defer sl.mu.Unlock()
@@ -197,10 +197,10 @@ func (sl *SSHLink) Close() error {
 	sl.status = StatusDisconnected
 	close(sl.closedCh)
 
-	sl.stdin.Close()
+	_ = sl.stdin.Close()
 	// Kill the subprocess if it is still running
 	if sl.cmd.Process != nil {
-		sl.cmd.Process.Kill()
+		_ = sl.cmd.Process.Kill()
 	}
 	return nil
 }

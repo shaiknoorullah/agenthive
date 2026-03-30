@@ -23,12 +23,12 @@ type PeerIdentity struct {
 
 // PairedPeer holds a remote peer's public identity (no private keys).
 type PairedPeer struct {
-	PeerID         string `json:"peer_id"`
-	Name           string `json:"name"`
-	PublicKey      []byte `json:"public_key"`
-	NoisePublicKey []byte `json:"noise_public_key"`
-	Addr           string `json:"addr,omitempty"`
-	LinkType       string `json:"link_type,omitempty"`
+	PeerID          string `json:"peer_id"`
+	Name            string `json:"name"`
+	PublicKey       []byte `json:"public_key"`
+	NoisePublicKey  []byte `json:"noise_public_key"`
+	Addr            string `json:"addr,omitempty"`
+	LinkType        string `json:"link_type,omitempty"`
 	noisePrivateKey []byte // unexported, never serialized, never set from external
 }
 

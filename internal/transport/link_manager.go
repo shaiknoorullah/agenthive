@@ -12,8 +12,8 @@ import (
 type LinkManager struct {
 	mu          sync.RWMutex
 	localPeerID string
-	links       map[string]Link          // peerID -> Link
-	inbound     chan Envelope              // aggregated inbound from all links
+	links       map[string]Link // peerID -> Link
+	inbound     chan Envelope   // aggregated inbound from all links
 	closedCh    chan struct{}
 	closed      bool
 	wg          sync.WaitGroup
@@ -36,7 +36,7 @@ func (lm *LinkManager) AddLink(link Link) {
 
 	lm.mu.Lock()
 	if old, exists := lm.links[peerID]; exists {
-		old.Close()
+		_ = old.Close()
 	}
 	lm.links[peerID] = link
 	lm.mu.Unlock()
@@ -73,7 +73,7 @@ func (lm *LinkManager) RemoveLink(peerID string) {
 	defer lm.mu.Unlock()
 
 	if link, exists := lm.links[peerID]; exists {
-		link.Close()
+		_ = link.Close()
 		delete(lm.links, peerID)
 	}
 }
@@ -156,7 +156,7 @@ func (lm *LinkManager) Close() error {
 	close(lm.closedCh)
 
 	for _, link := range lm.links {
-		link.Close()
+		_ = link.Close()
 	}
 	lm.links = make(map[string]Link)
 	lm.mu.Unlock()
