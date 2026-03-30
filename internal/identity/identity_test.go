@@ -132,3 +132,42 @@ func TestPeerIDFromPublicKey_Deterministic(t *testing.T) {
 	pid2 := PeerIDFromPublicKey(id.PublicKey)
 	assert.Equal(t, pid1, pid2)
 }
+
+func TestSaveToFile_UnwritableDirectory(t *testing.T) {
+	// Use /proc (Linux) as an unwritable base path — cannot create subdirs there.
+	path := "/proc/fake-agenthive-dir/sub/identity.json"
+	id, err := Generate("test")
+	require.NoError(t, err)
+
+	err = id.SaveToFile(path)
+	assert.Error(t, err)
+}
+
+func TestPeerIDFromPublicKey_InvalidBase64(t *testing.T) {
+	result := PeerIDFromPublicKey("!!!not-valid-base64!!!")
+	assert.Equal(t, "", result)
+}
+
+func TestSign_InvalidPrivateKey(t *testing.T) {
+	id := &Identity{
+		Name:       "bad",
+		PrivateKey: "!!!not-valid-base64!!!",
+	}
+	_, err := id.Sign([]byte("hello"))
+	assert.Error(t, err)
+}
+
+func TestVerify_InvalidBase64PublicKey(t *testing.T) {
+	valid := Verify("!!!not-valid-base64!!!", []byte("hello"), []byte("sig"))
+	assert.False(t, valid)
+}
+
+func TestLoadFromFile_InvalidJSON(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "bad.json")
+	err := os.WriteFile(path, []byte("{invalid json"), 0600)
+	require.NoError(t, err)
+
+	_, err = LoadFromFile(path)
+	assert.Error(t, err)
+}

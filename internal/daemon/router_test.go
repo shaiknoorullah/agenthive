@@ -291,3 +291,81 @@ func TestRouter_ExcludesSelf(t *testing.T) {
 	targets := router.Route(msg)
 	assert.ElementsMatch(t, []string{"phone"}, targets)
 }
+
+func TestMatchesRule_SessionFilter(t *testing.T) {
+	rule := crdt.RouteMatch{Session: "refactor"}
+
+	// Matching session
+	meta := messageMetadata{Session: "refactor", Project: "any"}
+	assert.True(t, matchesRule(rule, meta))
+
+	// Non-matching session
+	meta2 := messageMetadata{Session: "deploy", Project: "any"}
+	assert.False(t, matchesRule(rule, meta2))
+}
+
+func TestMatchesRule_PriorityFilter(t *testing.T) {
+	rule := crdt.RouteMatch{Priority: "critical"}
+
+	meta := messageMetadata{Priority: "critical", Project: "api"}
+	assert.True(t, matchesRule(rule, meta))
+
+	meta2 := messageMetadata{Priority: "info", Project: "api"}
+	assert.False(t, matchesRule(rule, meta2))
+}
+
+func TestMatchesRule_WindowFilter(t *testing.T) {
+	rule := crdt.RouteMatch{Window: "editor"}
+
+	meta := messageMetadata{Window: "editor"}
+	assert.True(t, matchesRule(rule, meta))
+
+	meta2 := messageMetadata{Window: "terminal"}
+	assert.False(t, matchesRule(rule, meta2))
+}
+
+func TestMatchesRule_PaneFilter(t *testing.T) {
+	rule := crdt.RouteMatch{Pane: "%3"}
+
+	meta := messageMetadata{Pane: "%3"}
+	assert.True(t, matchesRule(rule, meta))
+
+	meta2 := messageMetadata{Pane: "%0"}
+	assert.False(t, matchesRule(rule, meta2))
+}
+
+func TestExtractMetadata_ActionRequestPayload(t *testing.T) {
+	msg := protocol.Message{
+		Type:     protocol.MsgActionRequest,
+		SourceID: "peer-a",
+		Payload: protocol.ActionRequestPayload{
+			RequestID: "req-1",
+			Tool:      "Bash",
+			Command:   "ls",
+			Project:   "api",
+			Source:    "Claude",
+			Pane:      "%2",
+		},
+	}
+
+	meta := extractMetadata(msg)
+	assert.Equal(t, "api", meta.Project)
+	assert.Equal(t, "Claude", meta.Source)
+	assert.Equal(t, "%2", meta.Pane)
+	// ActionRequestPayload doesn't carry Session, Window, or Priority
+	assert.Empty(t, meta.Session)
+	assert.Empty(t, meta.Window)
+	assert.Empty(t, meta.Priority)
+}
+
+func TestExtractMetadata_UnknownPayloadType(t *testing.T) {
+	msg := protocol.Message{
+		Type:     protocol.MsgHeartbeat,
+		SourceID: "peer-a",
+		Payload:  protocol.HeartbeatPayload{Uptime: 100},
+	}
+
+	meta := extractMetadata(msg)
+	// Unknown payload type returns empty metadata
+	assert.Equal(t, messageMetadata{}, meta)
+}

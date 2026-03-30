@@ -1,6 +1,7 @@
 package daemon
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -200,4 +201,51 @@ func TestQueue_SurvivesRestart(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, msgs, 1)
 	assert.Equal(t, "persist-1", msgs[0].ID)
+}
+
+func TestQueue_NewQueue_UnwritablePath(t *testing.T) {
+	// Use a path under /proc which is not writable
+	_, err := NewQueue("/proc/1/queue-dir-test")
+	require.Error(t, err)
+}
+
+func TestQueue_Enqueue_ReadOnlyDir(t *testing.T) {
+	dir := t.TempDir()
+	queueDir := filepath.Join(dir, "queue")
+
+	q, err := NewQueue(queueDir)
+	require.NoError(t, err)
+
+	// Make the queue directory read-only
+	require.NoError(t, os.Chmod(queueDir, 0400))
+	t.Cleanup(func() { _ = os.Chmod(queueDir, 0700) })
+
+	msg := protocol.Message{
+		ID:       "fail-1",
+		Type:     protocol.MsgNotification,
+		SourceID: "peer-a",
+		Payload: protocol.NotificationPayload{
+			Project: "api",
+			Source:  "Claude",
+			Message: "should fail",
+		},
+	}
+	err = q.Enqueue("peer-b", msg)
+	require.Error(t, err)
+}
+
+func TestQueue_Drain_CorruptNDJSON(t *testing.T) {
+	dir := t.TempDir()
+	queueDir := filepath.Join(dir, "queue")
+
+	q, err := NewQueue(queueDir)
+	require.NoError(t, err)
+
+	// Write corrupt data directly to the queue file
+	corruptPath := filepath.Join(queueDir, "peer-b.ndjson")
+	require.NoError(t, os.WriteFile(corruptPath, []byte("not valid json\n"), 0600))
+
+	_, err = q.Drain("peer-b")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unmarshal queued message")
 }

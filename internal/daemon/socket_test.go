@@ -248,3 +248,10 @@ func TestSocketListener_SocketPath(t *testing.T) {
 
 	assert.Equal(t, sockPath, listener.Path())
 }
+
+func TestSocketListener_InvalidPath(t *testing.T) {
+	// Path in a non-existent directory should fail
+	handler := func(msg protocol.Message) {}
+	_, err := NewSocketListener("/no/such/dir/test.sock", handler)
+	require.Error(t, err)
+}
