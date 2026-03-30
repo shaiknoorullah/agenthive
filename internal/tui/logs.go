@@ -142,7 +142,7 @@ func (m LogsModel) View() string {
 
 	// Summary stats
 	s := m.stats()
-	b.WriteString(fmt.Sprintf("  Total: %d  |  ", s.Total))
+	fmt.Fprintf(&b, "  Total: %d  |  ", s.Total)
 	b.WriteString(m.styles.PriorityCritical.Render(fmt.Sprintf("Critical: %d", s.Critical)))
 	b.WriteString("  ")
 	b.WriteString(m.styles.PriorityWarning.Render(fmt.Sprintf("Warning: %d", s.Warning)))
@@ -152,7 +152,7 @@ func (m LogsModel) View() string {
 
 	// Filter indicator
 	if m.filterLevel != "" {
-		b.WriteString(fmt.Sprintf("  Filter: %s (press same key to clear)\n", m.filterLevel))
+		fmt.Fprintf(&b, "  Filter: %s (press same key to clear)\n", m.filterLevel)
 	}
 	b.WriteString("\n")
 

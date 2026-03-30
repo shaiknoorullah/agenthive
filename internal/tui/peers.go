@@ -79,9 +79,9 @@ func (m PeersModel) View() string {
 	var b strings.Builder
 
 	// Header
-	b.WriteString(fmt.Sprintf("  %-18s %-10s %-8s %-10s %s\n",
-		"PEER", "STATUS", "LATENCY", "AGENTS", "MESSAGES"))
-	b.WriteString(fmt.Sprintf("  %s\n", strings.Repeat("-", 60)))
+	fmt.Fprintf(&b, "  %-18s %-10s %-8s %-10s %s\n",
+		"PEER", "STATUS", "LATENCY", "AGENTS", "MESSAGES")
+	fmt.Fprintf(&b, "  %s\n", strings.Repeat("-", 60))
 
 	for i, p := range m.peers {
 		statusIcon := "*"

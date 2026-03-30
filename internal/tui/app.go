@@ -133,7 +133,7 @@ func (m AppModel) View() string {
 		b.WriteString("  ")
 	}
 	b.WriteString("\n")
-	b.WriteString(fmt.Sprintf("  %s\n", strings.Repeat("─", 60)))
+	fmt.Fprintf(&b, "  %s\n", strings.Repeat("─", 60))
 
 	// Active tab content
 	switch m.activeTab {

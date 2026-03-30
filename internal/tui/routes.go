@@ -130,8 +130,8 @@ func (m RoutesModel) View() string {
 	var b strings.Builder
 
 	// Header
-	b.WriteString(fmt.Sprintf("  %-30s %-5s %s\n", "SELECTOR", "->", "TARGETS"))
-	b.WriteString(fmt.Sprintf("  %s\n", strings.Repeat("-", 60)))
+	fmt.Fprintf(&b, "  %-30s %-5s %s\n", "SELECTOR", "->", "TARGETS")
+	fmt.Fprintf(&b, "  %s\n", strings.Repeat("-", 60))
 
 	for i, r := range m.routes {
 		line := fmt.Sprintf("  %-30s  ->  %s", r.Selector, r.Targets)
@@ -146,7 +146,7 @@ func (m RoutesModel) View() string {
 
 	if m.adding {
 		b.WriteString("\n")
-		b.WriteString(fmt.Sprintf("  Add route: %s_\n", m.input))
+		fmt.Fprintf(&b, "  Add route: %s_\n", m.input)
 		b.WriteString("  Format: <selector> -> <targets>  (Esc to cancel)\n")
 	}
 

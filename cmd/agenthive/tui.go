@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 
@@ -25,12 +24,4 @@ func runTUI() error {
 	}
 
 	return nil
-}
-
-// handleTUICommand is the entry point for the `tui` subcommand.
-func handleTUICommand() {
-	if err := runTUI(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
 }

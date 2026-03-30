@@ -97,7 +97,7 @@ func (m ActionsModel) View() string {
 
 	var b strings.Builder
 
-	b.WriteString(fmt.Sprintf("  %d pending action(s)\n\n", len(m.actions)))
+	fmt.Fprintf(&b, "  %d pending action(s)\n\n", len(m.actions))
 
 	for i, a := range m.actions {
 		ts := a.Timestamp.Format("15:04")
@@ -117,7 +117,7 @@ func (m ActionsModel) View() string {
 		if i == m.cursor {
 			approve := m.styles.ActionApprove.Render("[y] Allow")
 			deny := m.styles.ActionDeny.Render("[n] Deny")
-			b.WriteString(fmt.Sprintf("    %s  %s\n", approve, deny))
+			fmt.Fprintf(&b, "    %s  %s\n", approve, deny)
 		}
 
 		b.WriteString("\n")

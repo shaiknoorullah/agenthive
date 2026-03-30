@@ -93,7 +93,7 @@ func TestRoutesModel_DeleteEmitsMessage(t *testing.T) {
 
 	// Press 'd' to delete
 	updated, cmd := rm.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'d'}})
-	rm = updated.(RoutesModel)
+	_ = updated.(RoutesModel)
 
 	// The cmd should produce a RouteDeleteMsg
 	assert.NotNil(t, cmd)
