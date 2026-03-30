@@ -22,6 +22,20 @@ linters:
     - bodyclose
     - noctx
     - prealloc
+  settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+      disabled-tags:
+        - style
+        - experimental
+        - opinionated
+      disabled-checks:
+        - hugeParam
+        - rangeValCopy
+    misspell:
+      locale: US
   exclusions:
     rules:
       - path: _test\.go
@@ -29,15 +43,3 @@ linters:
           - errcheck
           - unparam
           - noctx
-
-linters-settings:
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - performance
-    disabled-tags:
-      - style
-      - experimental
-      - opinionated
-  misspell:
-    locale: US
