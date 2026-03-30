@@ -145,7 +145,7 @@ func (g *ActionGate) RunGate(ctx context.Context, input *HookInput) *GateResult 
 		select {
 		case <-ctx.Done():
 			g.queue.Cleanup(actionID)
-			return g.askResult("context cancelled")
+			return g.askResult("context canceled")
 
 		case <-deadline:
 			g.queue.Cleanup(actionID)
