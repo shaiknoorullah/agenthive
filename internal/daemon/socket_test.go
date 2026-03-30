@@ -14,7 +14,7 @@ import (
 )
 
 func TestSocketListener_AcceptsConnection(t *testing.T) {
-	dir := t.TempDir()
+	dir := shortTempDir(t)
 	sockPath := filepath.Join(dir, "test.sock")
 
 	var received []protocol.Message
@@ -66,7 +66,7 @@ func TestSocketListener_AcceptsConnection(t *testing.T) {
 }
 
 func TestSocketListener_MultipleMessages(t *testing.T) {
-	dir := t.TempDir()
+	dir := shortTempDir(t)
 	sockPath := filepath.Join(dir, "test.sock")
 
 	var received []protocol.Message
@@ -114,7 +114,7 @@ func TestSocketListener_MultipleMessages(t *testing.T) {
 }
 
 func TestSocketListener_MultipleConnections(t *testing.T) {
-	dir := t.TempDir()
+	dir := shortTempDir(t)
 	sockPath := filepath.Join(dir, "test.sock")
 
 	var received []protocol.Message
@@ -163,7 +163,7 @@ func TestSocketListener_MultipleConnections(t *testing.T) {
 }
 
 func TestSocketListener_Close_StopsAccepting(t *testing.T) {
-	dir := t.TempDir()
+	dir := shortTempDir(t)
 	sockPath := filepath.Join(dir, "test.sock")
 
 	handler := func(msg protocol.Message) {}
@@ -186,7 +186,7 @@ func TestSocketListener_Close_StopsAccepting(t *testing.T) {
 }
 
 func TestSocketListener_InvalidJSON_DoesNotCrash(t *testing.T) {
-	dir := t.TempDir()
+	dir := shortTempDir(t)
 	sockPath := filepath.Join(dir, "test.sock")
 
 	var received []protocol.Message
@@ -237,7 +237,7 @@ func TestSocketListener_InvalidJSON_DoesNotCrash(t *testing.T) {
 }
 
 func TestSocketListener_SocketPath(t *testing.T) {
-	dir := t.TempDir()
+	dir := shortTempDir(t)
 	sockPath := filepath.Join(dir, "test.sock")
 
 	handler := func(msg protocol.Message) {}

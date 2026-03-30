@@ -23,7 +23,7 @@ func TestDaemon_NewWithConfig(t *testing.T) {
 }
 
 func TestDaemon_StartAndStop(t *testing.T) {
-	dir := t.TempDir()
+	dir := shortTempDir(t)
 	cfg := DaemonConfig{
 		ConfigDir: dir,
 		PeerName:  "test-peer",
@@ -73,7 +73,7 @@ func TestDaemon_Status_NotRunning(t *testing.T) {
 }
 
 func TestDaemon_Status_Running(t *testing.T) {
-	dir := t.TempDir()
+	dir := shortTempDir(t)
 	cfg := DaemonConfig{
 		ConfigDir: dir,
 		PeerName:  "test-peer",
@@ -92,7 +92,7 @@ func TestDaemon_Status_Running(t *testing.T) {
 }
 
 func TestDaemon_SavesStateOnStop(t *testing.T) {
-	dir := t.TempDir()
+	dir := shortTempDir(t)
 	cfg := DaemonConfig{
 		ConfigDir: dir,
 		PeerName:  "test-peer",
@@ -117,7 +117,7 @@ func TestDaemon_SavesStateOnStop(t *testing.T) {
 }
 
 func TestDaemon_LoadsStateOnStart(t *testing.T) {
-	dir := t.TempDir()
+	dir := shortTempDir(t)
 	cfg := DaemonConfig{
 		ConfigDir: dir,
 		PeerName:  "test-peer",
@@ -144,7 +144,7 @@ func TestDaemon_LoadsStateOnStart(t *testing.T) {
 }
 
 func TestDaemon_StaleSocketCleaned(t *testing.T) {
-	dir := t.TempDir()
+	dir := shortTempDir(t)
 	sockPath := filepath.Join(dir, "daemon.sock")
 
 	// Create a stale socket file
@@ -168,7 +168,7 @@ func TestDaemon_StaleSocketCleaned(t *testing.T) {
 }
 
 func TestDaemon_IdentityCreatedOnInit(t *testing.T) {
-	dir := t.TempDir()
+	dir := shortTempDir(t)
 	cfg := DaemonConfig{
 		ConfigDir: dir,
 		PeerName:  "test-peer",
