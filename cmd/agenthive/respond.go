@@ -50,7 +50,7 @@ func ParseRespondArg(arg string) (decision, actionID string, err error) {
 func RunRespondCommand(arg string, config RespondConfig) int {
 	decision, actionID, err := ParseRespondArg(arg)
 	if err != nil {
-		fmt.Fprintf(nil_safe_stderr(), "Error: %v\n", err)
+		_, _ = fmt.Fprintf(nil_safe_stderr(), "Error: %v\n", err)
 		return 1
 	}
 
@@ -59,14 +59,14 @@ func RunRespondCommand(arg string, config RespondConfig) int {
 	// Read the pending action to verify it exists
 	pending, err := queue.ReadPending(actionID)
 	if err != nil {
-		fmt.Fprintf(nil_safe_stderr(), "Action not found: %s\n", actionID)
+		_, _ = fmt.Fprintf(nil_safe_stderr(), "Action not found: %s\n", actionID)
 		return 1
 	}
 
 	// Check expiry
 	if hooks.IsExpired(pending.ExpiresAt) {
 		queue.Cleanup(actionID)
-		fmt.Fprintf(nil_safe_stderr(), "Action expired: %s\n", actionID)
+		_, _ = fmt.Fprintf(nil_safe_stderr(), "Action expired: %s\n", actionID)
 		return 1
 	}
 
@@ -80,7 +80,7 @@ func RunRespondCommand(arg string, config RespondConfig) int {
 	}
 
 	if err := queue.WriteResponse(actionID, resp); err != nil {
-		fmt.Fprintf(nil_safe_stderr(), "Action already handled: %s\n", actionID)
+		_, _ = fmt.Fprintf(nil_safe_stderr(), "Action already handled: %s\n", actionID)
 		return 1
 	}
 

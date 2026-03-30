@@ -50,7 +50,7 @@ func handlePreToolUse(ctx context.Context, data []byte, stdout io.Writer, config
 	input, err := hooks.ParseHookInput(data)
 	if err != nil {
 		// Cannot parse input -- fall through to normal prompt
-		stdout.Write(hooks.BuildDecisionJSON("ask", ""))
+		_, _ = stdout.Write(hooks.BuildDecisionJSON("ask", ""))
 		return 0
 	}
 
@@ -63,7 +63,7 @@ func handlePreToolUse(ctx context.Context, data []byte, stdout io.Writer, config
 
 	result := gate.RunGate(ctx, input)
 
-	stdout.Write(result.JSON)
+	_, _ = stdout.Write(result.JSON)
 	return result.ExitCode
 }
 
@@ -75,7 +75,7 @@ func handleNotification(data []byte, config HookConfig) int {
 		return 0
 	}
 
-	hooks.HandleNotification(notif, config.SocketPath)
+	_ = hooks.HandleNotification(notif, config.SocketPath)
 	return 0
 }
 
@@ -87,6 +87,6 @@ func handleStop(data []byte, config HookConfig) int {
 		return 0
 	}
 
-	hooks.HandleStop(stop, config.SocketPath)
+	_ = hooks.HandleStop(stop, config.SocketPath)
 	return 0
 }

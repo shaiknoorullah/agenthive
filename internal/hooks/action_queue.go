@@ -37,8 +37,9 @@ type ActionResponse struct {
 
 // ActionQueue manages pending action files on disk.
 // Files are stored in a single directory with the naming convention:
-//   {action_id}.pending  -- pending action request
-//   {action_id}.response -- user's decision
+//
+//	{action_id}.pending  -- pending action request
+//	{action_id}.response -- user's decision
 type ActionQueue struct {
 	dir string
 }
@@ -46,7 +47,7 @@ type ActionQueue struct {
 // NewActionQueue creates a new ActionQueue backed by the given directory.
 // Creates the directory if it does not exist (mode 0700).
 func NewActionQueue(dir string) *ActionQueue {
-	os.MkdirAll(dir, 0700)
+	_ = os.MkdirAll(dir, 0700)
 	return &ActionQueue{dir: dir}
 }
 
@@ -103,11 +104,11 @@ func (q *ActionQueue) WriteResponse(actionID string, resp ActionResponse) error 
 		}
 		return fmt.Errorf("create response file for %s: %w", actionID, err)
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck // file write already checked below
 
 	if _, err := f.Write(data); err != nil {
 		// Best effort: remove the partially written file
-		os.Remove(path)
+		_ = os.Remove(path)
 		return fmt.Errorf("write response for %s: %w", actionID, err)
 	}
 	return nil
@@ -134,8 +135,8 @@ func (q *ActionQueue) HasResponse(actionID string) bool {
 
 // Cleanup removes both the pending and response files for an action.
 func (q *ActionQueue) Cleanup(actionID string) {
-	os.Remove(q.pendingPath(actionID))
-	os.Remove(q.responsePath(actionID))
+	_ = os.Remove(q.pendingPath(actionID))
+	_ = os.Remove(q.responsePath(actionID))
 }
 
 // CleanupExpired removes all expired pending actions.

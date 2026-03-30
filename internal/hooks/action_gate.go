@@ -191,11 +191,11 @@ func (g *ActionGate) askResult(reason string) *GateResult {
 // This is best-effort: if the daemon is not running, the action still works
 // via local notification surfaces. The daemon handles remote routing.
 func (g *ActionGate) dispatchToDaemon(action PendingAction) {
-	conn, err := net.DialTimeout("unix", g.config.SocketPath, 2*time.Second)
+	conn, err := net.DialTimeout("unix", g.config.SocketPath, 2*time.Second) //nolint:noctx // best-effort fire-and-forget
 	if err != nil {
 		return // daemon not available, degrade gracefully
 	}
-	defer conn.Close()
+	defer conn.Close() //nolint:errcheck // best-effort cleanup
 
 	msg := struct {
 		Type   string        `json:"type"`
@@ -211,6 +211,6 @@ func (g *ActionGate) dispatchToDaemon(action PendingAction) {
 	}
 
 	// Write JSON + newline (newline-delimited JSON protocol)
-	conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
-	conn.Write(append(data, '\n'))
+	_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
+	_, _ = conn.Write(append(data, '\n'))
 }

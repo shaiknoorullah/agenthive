@@ -88,12 +88,12 @@ func BuildStopMessage(stop *StopInput) DaemonMessage {
 // dispatchMessage sends a DaemonMessage to the daemon via Unix socket.
 // Returns nil if the socket is unavailable (graceful degradation).
 func dispatchMessage(msg DaemonMessage, socketPath string) error {
-	conn, err := net.DialTimeout("unix", socketPath, 2*time.Second)
+	conn, err := net.DialTimeout("unix", socketPath, 2*time.Second) //nolint:noctx // best-effort fire-and-forget
 	if err != nil {
 		// Daemon not available -- degrade gracefully
 		return nil
 	}
-	defer conn.Close()
+	defer conn.Close() //nolint:errcheck // best-effort cleanup
 
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -101,7 +101,7 @@ func dispatchMessage(msg DaemonMessage, socketPath string) error {
 	}
 
 	// Newline-delimited JSON protocol
-	conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
+	_ = conn.SetWriteDeadline(time.Now().Add(2 * time.Second))
 	if _, err := conn.Write(append(data, '\n')); err != nil {
 		return fmt.Errorf("write to daemon socket: %w", err)
 	}
