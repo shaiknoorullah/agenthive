@@ -56,7 +56,7 @@ func TestParseStopInput_InvalidJSON(t *testing.T) {
 }
 
 func TestHandleNotification_DispatchesToSocket(t *testing.T) {
-	socketDir := t.TempDir()
+	socketDir := shortTempDir(t)
 	socketPath := filepath.Join(socketDir, "test.sock")
 
 	// Start a mock daemon listening on the socket
@@ -103,7 +103,7 @@ func TestHandleNotification_NoSocket_ReturnsNil(t *testing.T) {
 }
 
 func TestHandleStop_DispatchesToSocket(t *testing.T) {
-	socketDir := t.TempDir()
+	socketDir := shortTempDir(t)
 	socketPath := filepath.Join(socketDir, "test.sock")
 
 	listener, err := net.Listen("unix", socketPath)
@@ -177,7 +177,7 @@ func TestBuildNotificationMessage_EmptyCWD(t *testing.T) {
 }
 
 func TestHandleNotification_MessageIsNewlineDelimitedJSON(t *testing.T) {
-	socketDir := t.TempDir()
+	socketDir := shortTempDir(t)
 	socketPath := filepath.Join(socketDir, "test.sock")
 
 	listener, err := net.Listen("unix", socketPath)

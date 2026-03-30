@@ -227,7 +227,7 @@ func TestIntegration_FirstResponseWins_ConcurrentResponses(t *testing.T) {
 }
 
 func TestIntegration_DaemonDispatch_ReceivesActionRequest(t *testing.T) {
-	dir := t.TempDir()
+	dir := shortTempDir(t)
 	q := NewActionQueue(dir)
 
 	socketPath := filepath.Join(dir, "daemon.sock")
