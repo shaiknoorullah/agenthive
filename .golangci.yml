@@ -1,39 +1,45 @@
+version: "2"
+
 run:
   timeout: 5m
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
 
 linters:
   enable:
     - errcheck
-    - gosimple
     - govet
     - ineffassign
     - staticcheck
     - unused
     - gocritic
-    - gofmt
-    - goimports
     - misspell
     - unconvert
     - unparam
     - bodyclose
     - noctx
     - prealloc
-
-linters-settings:
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - performance
-    disabled-tags:
-      - style
-      - experimental
-      - opinionated
-  misspell:
-    locale: US
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
-        - unparam
+  settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+      disabled-tags:
+        - style
+        - experimental
+        - opinionated
+      disabled-checks:
+        - hugeParam
+        - rangeValCopy
+    misspell:
+      locale: US
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+          - unparam
+          - noctx
