@@ -230,7 +230,16 @@ Get notifications, approve actions, and control your coding agents from anywhere
 		},
 	}
 
-	rootCmd.AddCommand(initCmd, startCmd, stopCmd, statusCmd, peersCmd, routesCmd, configCmd, respondCmd)
+	// agenthive tui
+	tuiCmd := &cobra.Command{
+		Use:   "tui",
+		Short: "Launch interactive TUI management interface",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runTUI()
+		},
+	}
+
+	rootCmd.AddCommand(initCmd, startCmd, stopCmd, statusCmd, peersCmd, routesCmd, configCmd, respondCmd, tuiCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

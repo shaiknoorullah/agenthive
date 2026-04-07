@@ -1,0 +1,6 @@
+  PEER               STATUS     LATENCY  AGENTS     MESSAGES
+  ------------------------------------------------------------
+  * dev-server       online     12ms     5 agents   43 msgs today
+  * macbook-pro      online     3ms      2 agents   18 msgs today
+  * pixel-phone      online     45ms     0 agents   7 msgs today
+  o work-desktop     offline    --       0 agents   last seen 2h ago
