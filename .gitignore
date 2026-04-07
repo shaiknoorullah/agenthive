@@ -7,6 +7,7 @@
 
 # Test
 coverage.out
+transport_coverage.out
 *.test
 
 # IDE
