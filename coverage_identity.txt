@@ -1,0 +1,25 @@
+mode: atomic
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:24.47,26.16 2 12
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:26.16,28.3 1 0
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:30.2,38.8 3 12
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:44.51,46.16 2 16
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:46.16,48.3 1 1
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:49.2,50.37 2 15
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:54.58,56.16 2 5
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:56.16,58.3 1 1
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:59.2,60.41 2 4
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:64.64,66.16 2 5
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:66.16,68.3 1 1
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:69.2,70.42 2 4
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:74.51,76.16 2 2
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:76.16,78.3 1 0
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:80.2,81.47 2 2
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:81.47,83.3 1 1
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:85.2,86.54 2 1
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:86.54,88.3 1 0
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:89.2,89.29 1 1
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:93.51,95.16 2 3
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:95.16,97.3 1 1
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:98.2,99.50 2 2
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:99.50,101.3 1 1
+github.com/shaiknoorullah/agenthive/internal/identity/identity.go:102.2,102.17 1 1
