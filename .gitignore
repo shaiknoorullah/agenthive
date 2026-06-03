@@ -1,5 +1,5 @@
 # Binaries
-agenthive
+/agenthive
 *.exe
 *.dll
 *.so

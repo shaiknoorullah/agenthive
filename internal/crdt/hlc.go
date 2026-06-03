@@ -63,10 +63,11 @@ func (ts *Timestamp) UnmarshalJSON(data []byte) error {
 // HLC is a Hybrid Logical Clock.
 // Safe for concurrent use.
 type HLC struct {
-	mu     sync.Mutex
-	peerID string
-	wallFn func() time.Time
-	last   Timestamp
+	mu          sync.Mutex
+	peerID      string
+	wallFn      func() time.Time
+	last        Timestamp
+	initialized bool
 }
 
 // NewHLC creates a new HLC with the system clock.
@@ -85,16 +86,34 @@ func NewHLCWithWall(peerID string, wallFn func() time.Time) *HLC {
 	}
 }
 
-// Now generates a new timestamp guaranteed to be after the last one.
+// Now generates a new timestamp guaranteed to be strictly after the last one.
+//
+// Note: when the wall clock has not advanced (or this is the first call against
+// a zero-valued h.last), we still must produce a Timestamp that compares
+// strictly After h.last under Timestamp.After's ordering (wall, counter,
+// peerID). We do that by bumping the counter, never by silently returning the
+// previous value.
 func (h *HLC) Now() Timestamp {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	now := h.wallFn().UTC().Truncate(time.Millisecond)
 
-	if now.After(h.last.Wall) {
+	switch {
+	case !h.initialized:
+		// First call: emit a timestamp that is strictly after the zero-valued
+		// h.last. If the wall clock is itself zero, advance counter to 1 so
+		// After() returns true via the counter rather than the wall.
+		if now.After(h.last.Wall) {
+			h.last = Timestamp{Wall: now, Counter: 0, PeerID: h.peerID}
+		} else {
+			h.last = Timestamp{Wall: h.last.Wall, Counter: h.last.Counter + 1, PeerID: h.peerID}
+		}
+		h.initialized = true
+	case now.After(h.last.Wall):
 		h.last = Timestamp{Wall: now, Counter: 0, PeerID: h.peerID}
-	} else {
+	default:
+		// now <= h.last.Wall: keep last wall and bump counter so After() holds.
 		h.last = Timestamp{Wall: h.last.Wall, Counter: h.last.Counter + 1, PeerID: h.peerID}
 	}
 

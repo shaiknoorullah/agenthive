@@ -25,6 +25,19 @@ func TestHLC_Now_IncreasesCounterWhenWallClockUnchanged(t *testing.T) {
 	assert.Equal(t, uint32(1), ts2.Counter-ts1.Counter)
 }
 
+// Regression test: when the wall clock returns the zero time and the HLC is
+// freshly constructed, Now() must still produce strictly-After timestamps.
+// Previously, the first call against zero h.last with a zero-valued wall hit
+// a branch that did not advance the counter, yielding two equal timestamps.
+func TestHLC_Now_StrictlyMonotonicFromZeroWall(t *testing.T) {
+	clock := NewHLCWithWall("peer-a", func() time.Time { return time.Time{} })
+	ts1 := clock.Now()
+	ts2 := clock.Now()
+	ts3 := clock.Now()
+	assert.True(t, ts2.After(ts1), "ts2 must be strictly after ts1 (cold-start zero wall)")
+	assert.True(t, ts3.After(ts2), "ts3 must be strictly after ts2 (zero wall, repeated)")
+}
+
 func TestHLC_Update_AdvancesFromRemoteTimestamp(t *testing.T) {
 	clockA := NewHLC("peer-a")
 	clockB := NewHLC("peer-b")
