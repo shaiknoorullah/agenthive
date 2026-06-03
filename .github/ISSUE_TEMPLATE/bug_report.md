@@ -24,17 +24,19 @@ What you expected to happen.
 ## Environment
 
 - **OS**: [e.g., Ubuntu 24.04, macOS 15, Termux on Android 14]
-- **tmux version**: [e.g., 3.4]
-- **agenthive version**: [e.g., v0.1.0]
+- **agenthive version**: [e.g., commit SHA or `agenthive --version`]
 - **Go version** (if building from source): [e.g., 1.22]
+- **tmux version** (only if exercising the tmux surface): [e.g., 3.4]
 
 ## Logs
 
-Relevant output from `~/.config/agenthive/logs/events.log`:
+Relevant agenthive output (default log surface is JSON lines under `~/.config/agenthive/`):
 
 ```
 paste logs here
 ```
+
+For libp2p connection issues, also include `GOLOG_LOG_LEVEL=debug` output from a short reproduction.
 
 ## Additional context
 
