@@ -2,7 +2,7 @@
 
 # agenthive
 
-**Encrypted, self-hosted mesh for AI agent notification and control.**
+**Encrypted, peer-to-peer mesh for AI agent notification and control.**
 
 [![CI](https://github.com/shaiknoorullah/agenthive/actions/workflows/ci.yml/badge.svg)](https://github.com/shaiknoorullah/agenthive/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/shaiknoorullah/agenthive)](https://goreportcard.com/report/github.com/shaiknoorullah/agenthive)
