@@ -2,7 +2,7 @@
 
 # agenthive
 
-**A self-hosted, encrypted mesh for AI agent notification and control.**
+**Encrypted, self-hosted mesh for AI agent notification and control.**
 
 [![CI](https://github.com/shaiknoorullah/agenthive/actions/workflows/ci.yml/badge.svg)](https://github.com/shaiknoorullah/agenthive/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/shaiknoorullah/agenthive)](https://goreportcard.com/report/github.com/shaiknoorullah/agenthive)
@@ -10,19 +10,16 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![GitHub Release](https://img.shields.io/github/v/release/shaiknoorullah/agenthive?sort=semver)](https://github.com/shaiknoorullah/agenthive/releases)
 
-Get notifications, approve actions, and control your AI coding agents from anywhere --
-your server, your laptop, or your phone. No cloud. No intermediaries. Just your machines, talking directly.
+Approve Claude Code from your phone in under a second.
+No cloud. No broker. Your machines, talking directly over libp2p.
 
-[Getting Started](#getting-started) |
-[Features](#features) |
-[Architecture](#architecture) |
-[Contributing](CONTRIBUTING.md)
+[Quick Start](#quick-start) · [How It Works](#how-it-works) · [Status](#status) · [Architecture](#architecture) · [Contributing](CONTRIBUTING.md)
 
 </div>
 
 ---
 
-Your AI agents run on a server at home. You're on the bus. Your phone buzzes:
+Your AI agents run on a dev server. You're on a train. Your phone buzzes:
 
 > **Claude wants to run:** `rm -rf /tmp/build`
 >
@@ -30,376 +27,296 @@ Your AI agents run on a server at home. You're on the bus. Your phone buzzes:
 
 You tap Allow. Claude proceeds. No cloud service touched the message.
 
-agenthive turns every terminal into a command center for your agents.
+agenthive turns every device you own into a coordination node for your AI agents.
+
+---
+
+## Why agenthive
+
+- **Approve actions from anywhere.** Claude Code's `PreToolUse` hook routes through your own mesh to whichever device is in your hand — server, laptop, phone in Termux. First responder wins, atomic file-create as the race primitive. The agent never sees a fingerprint prompt, never blocks on a keystroke.
+
+- **State syncs without consensus.** Routing rules, peer presence, and config are LWW-CRDTs over Hybrid Logical Clocks. Edit on your phone in airplane mode; it reconciles when you reconnect. No leader, no quorum, no split-brain.
+
+- **No infrastructure to run.** No cloud, no broker, no rendezvous server, no STUN, no TURN, no control plane. Every agenthive node also ships a libp2p Circuit Relay v2 — whichever of *your own* peers happens to have a public address picks up the relay role automatically.
+
+- **Battle-tested wire.** Transport, identity, encryption, multiplexing, and NAT traversal are handled by [go-libp2p](https://github.com/libp2p/go-libp2p) — the same stack securing the consensus layer of Ethereum, Filecoin, and Optimism.
+
+---
+
+## Status
+
+Honest snapshot of what ships today and what's next.
+
+| Subsystem | Status |
+|---|---|
+| libp2p Host: TCP + QUIC, Noise XX, Yamux, IPv4 + IPv6 | shipped |
+| NAT traversal: DCUtR, AutoRelay, UPnP / NAT-PMP | shipped |
+| Embedded Circuit Relay v2 on every node | shipped |
+| mDNS for zero-config LAN peer discovery | shipped |
+| CRDT state sync via GossipSub on `/agenthive/state/v1` | shipped |
+| Action gate via Claude Code `PreToolUse` hook | shipped |
+| Destructive-action classifier (30s TTL on `rm -rf`, `DROP TABLE`, etc.) | shipped |
+| Atomic first-response-wins (`O_CREAT\|O_EXCL` file queue) | shipped |
+| CLI: `init`, `id`, `peers add\|list`, `start`, `hook`, `respond` | shipped |
+| Log surface (line-delimited JSON) | shipped |
+| tmux per-pane surface (zero-fork status line) | next |
+| Desktop notifications (notify-send / osascript) | next |
+| Bubbletea TUI: peers, routes, actions, logs | next |
+| Termux push surface | planned |
+| ntfy, Slack, Discord, PWA surfaces | planned |
+| Signed GossipSub messages with per-peer key validation | planned |
+
+No pre-built binaries yet — build from source. The CLI works, the daemon works, two-peer CRDT convergence is tested. The action gate is end-to-end functional with the log surface; richer surfaces are the next push.
+
+---
+
+## Quick Start
+
+### Install
+
+```bash
+go install github.com/shaiknoorullah/agenthive/cmd/agenthive@latest
+```
+
+Requires Go 1.22+. Drops `agenthive` into `$GOPATH/bin`.
+
+### Two-peer mesh in five minutes
+
+On **device A** (your laptop):
+
+```bash
+agenthive init                # generate an Ed25519 identity in ~/.config/agenthive/identity.key
+agenthive id                  # print this peer's listening multiaddrs
+# /ip4/192.168.1.10/tcp/9123/p2p/12D3KooWAbCdEf...
+# /ip4/192.168.1.10/udp/9123/quic-v1/p2p/12D3KooWAbCdEf...
+agenthive start               # start the daemon; blocks until ^C
+```
+
+On **device B** (your dev server, or a phone in Termux):
+
+```bash
+agenthive init
+agenthive peers add /ip4/192.168.1.10/tcp/9123/p2p/12D3KooWAbCdEf...
+agenthive start
+```
+
+Both daemons gossip CRDT state on topic `/agenthive/state/v1`. Mutate a peer entry on one — the other converges within a round trip. mDNS will also auto-discover same-LAN peers without `peers add`.
+
+### Wire it into Claude Code
+
+In `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          { "type": "command", "command": "agenthive hook PreToolUse", "timeout": 310 }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Now every Bash, Write, or Edit by Claude routes through the local agenthive daemon. The daemon classifies the tool input (destructive → 30s TTL, normal → 300s), dispatches the action request to every configured surface, and blocks for the response.
+
+While the dedicated surfaces are still being built, respond manually:
+
+```bash
+agenthive respond <action-id> allow
+# or: agenthive respond <action-id> deny
+```
+
+**Fail-open by design.** If the daemon is unreachable or the gate times out, the hook returns nothing and Claude falls back to its built-in permission prompt. agenthive never blocks the agent indefinitely.
+
+---
 
 ## How It Works
 
+Each device runs one binary. There is no client/server split.
+
 ```mermaid
 graph LR
-    subgraph Server["Server (tmux)"]
+    subgraph Server["Dev server"]
         CC[Claude Code]
-        CX[Codex CLI]
-        H[agenthive hook]
-        CC --> H
-        CX --> H
+        H1[agenthive hook]
+        D1[agenthive daemon]
+        CC --> H1
+        H1 --> D1
     end
 
-    subgraph Laptop["Laptop (tmux)"]
-        DN[Desktop Notifs]
-        SB[tmux Status Bar]
-        TUI1[TUI Dashboard]
+    subgraph Laptop["Laptop"]
+        D2[agenthive daemon]
+        LS[Log surface]
+        D2 --> LS
     end
 
-    subgraph Phone["Phone (Termux)"]
-        AN[Android Push]
-        AB[Action Buttons]
-        TUI2[TUI Dashboard]
+    subgraph Phone["Phone in Termux"]
+        D3[agenthive daemon]
+        FS["Surfaces<br/>(planned)"]
+        D3 -.-> FS
     end
 
-    H <-->|"SSH Tunnel<br/>(encrypted)"| D1[agenthive daemon]
-    D1 <-->|"SSH Tunnel<br/>(encrypted)"| D2[agenthive daemon]
-    D1 <-->|"SSH Tunnel<br/>(encrypted)"| D3[agenthive daemon]
-
-    D2 --> DN
-    D2 --> SB
-    D2 --> TUI1
-
-    D3 --> AN
-    D3 --> AB
-    D3 --> TUI2
+    D1 <-->|"libp2p<br/>Noise XX over TCP / QUIC"| D2
+    D1 <-->|"libp2p<br/>Noise XX over TCP / QUIC"| D3
+    D2 <-->|"libp2p<br/>Noise XX over TCP / QUIC"| D3
 
     style Server fill:#1a1b26,stroke:#7aa2f7,color:#c0caf5
     style Laptop fill:#1a1b26,stroke:#9ece6a,color:#c0caf5
     style Phone fill:#1a1b26,stroke:#e0af68,color:#c0caf5
 ```
 
-Every device runs the same `agenthive` daemon. Every device is an equal peer. Change a routing rule on your phone -- the server learns instantly.
+Three things are happening at once.
 
-## Features
+**1. Identity & transport.** PeerID is the SHA-256 multihash of the Ed25519 public key — deterministic, no registration, no CA. Multiaddrs include both TCP and QUIC on both IPv4 and IPv6. Every connection runs Noise XX for mutual authentication and ChaCha20-Poly1305 encryption.
 
-### Reach You Anywhere
+**2. State diffusion.** A `StateStore` of three LWW-Maps (peers, routes, config) keyed by HLC timestamps. Mutations stamp locally and broadcast as `StateDelta` messages on GossipSub. Receivers merge — last-writer-wins per key, tombstones for deletes, peer-ID lexicographic tiebreak. Total order under partial connectivity.
 
-- **tmux status bar** -- native per-pane notifications with zero shell forks
-- **Desktop** -- `notify-send` on Linux, `osascript` on macOS
-- **Android** -- native push notifications with action buttons via Termux
-- **Audio** -- terminal bell, system sounds, or custom audio files
+**3. Action gate.** Claude Code's `PreToolUse` hook calls `agenthive hook PreToolUse`. The CLI dials the local daemon's Unix socket with the action request. The daemon fans out via per-protocol libp2p streams to all configured action surfaces and polls for `<action-id>.response`. First atomic file-create wins; all other surfaces get `EEXIST` and silently exit their prompts. The gate unblocks, deletes the file, and emits the JSON Claude expects.
 
-### Bidirectional Agent Control
+```mermaid
+sequenceDiagram
+    participant Agent as Claude Code
+    participant Hook as agenthive hook
+    participant Local as Local daemon
+    participant Surface as Any surface
 
-- **Action buttons** -- approve or deny agent permission requests from any device
-- **Remote commands** -- tell agents on remote servers what to do from your phone
-- **Hook-native** -- uses Claude Code's `PreToolUse` hook for programmatic allow/deny, no keystroke injection
-
-### Intelligent Routing
-
-```bash
-agenthive routes add "project:api-server -> phone, laptop"
-agenthive routes add "session:refactor -> telegram"
-agenthive routes add "priority:critical -> ALL"
-agenthive routes add "source:Codex -> desktop-only"
+    Agent->>Hook: PreToolUse JSON via stdin
+    Hook->>Local: action_request (Unix socket)
+    Local->>Surface: libp2p stream (ProtoActionRequest)
+    Surface->>Surface: render + collect user response
+    Surface-->>Local: action_response (O_CREAT|O_EXCL)
+    Local-->>Hook: response JSON
+    Hook-->>Agent: {"hookSpecificOutput":{"permissionDecision":"allow"}}
 ```
 
-Route notifications per-agent, per-project, per-session, per-window, or per-pane. Rules sync across all peers automatically via CRDTs.
-
-### Distributed Mesh Management
-
-Manage peers, routes, and configuration from **any** connected device. The TUI works identically in tmux and Termux.
-
-```
-+===============================================================+
-|  Peers                                                        |
-|  * dev-server     online   12ms   5 agents   43 msgs today    |
-|  * macbook-pro    online    3ms   2 agents   18 msgs today    |
-|  * pixel-phone    online   45ms   0 agents    7 msgs today    |
-|  o work-desktop   offline  --     last seen 2h ago            |
-|                                                               |
-|  Routes                                                       |
-|  api-server/*      -> phone, laptop                           |
-|  session:refactor  -> telegram                                |
-|  priority:critical -> ALL                                     |
-|                                                               |
-|  [p]eers  [r]outes  [m]etrics  [a]dd device  [q]uit           |
-+===============================================================+
-```
-
-### Smart Local Notifications
-
-Built on native tmux per-pane options -- not filesystem polling:
-
-- **Atomic** -- no race conditions, no dual-file writes
-- **Zero-fork** -- status line renders via tmux format strings, not shell commands
-- **O(1) clearing** -- inline hook, no directory scanning
-- **Auto-cleanup** -- pane destruction clears notifications automatically
-- **Worktree-aware** -- shows `project/worktree` for git worktrees
-
-### Priority Levels
-
-```
-[14:30] Claude/api-server: Task failed        <- red, bold (critical)
-[14:31] Claude/frontend: Agent has finished   <- default (info)
-[14:32] Codex/docs: Needs approval            <- yellow (warning)
-```
-
-### Agent State Tracking
-
-```
-* api-server   ? frontend   * docs-gen
-```
-
-Running, waiting, done -- visible in status bar and dashboard.
-
-### Notification Grouping
-
-When multiple agents in the same project finish simultaneously:
-
-```
-[14:30] Claude/my-project: 5 agents finished
-```
-
-Expand details in the picker or dashboard.
-
-## Getting Started
-
-### Requirements
-
-- Go 1.22+ (build from source) or grab a [prebuilt binary](https://github.com/shaiknoorullah/agenthive/releases)
-- tmux 3.2+
-- SSH keys configured
-- [fzf](https://github.com/junegunn/fzf) (for notification picker)
-- [Termux](https://termux.dev) + [Termux:API](https://wiki.termux.com/wiki/Termux:API) (Android, optional)
-
-### Install
-
-```bash
-go install github.com/shaiknoorullah/agenthive@latest
-```
-
-Or download a prebuilt binary from [Releases](https://github.com/shaiknoorullah/agenthive/releases) for `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`.
-
-### Termux (Android)
-
-```bash
-pkg install openssh autossh jq
-# download the linux/arm64 binary from releases
-# install Termux:API from F-Droid for native notifications
-```
-
-### tmux Plugin (local notifications only)
-
-```tmux
-set -g @plugin 'shaiknoorullah/agenthive'
-```
-
-### Quick Start
-
-```bash
-# 1. Initialize on every device
-agenthive init
-
-# 2. Pair your devices
-agenthive pair --remote user@laptop
-agenthive pair --remote user@phone:8022    # Termux
-
-# 3. Establish links
-agenthive link --to laptop --via ssh
-agenthive link --to phone --via ssh
-
-# 4. Start the daemon
-agenthive start --daemon
-
-# 5. Configure Claude Code hooks
-agenthive hooks install    # adds hooks to ~/.claude/settings.json
-
-# 6. Set up routes
-agenthive routes add "priority:critical -> ALL"
-agenthive routes add "project:api-server -> phone, laptop"
-agenthive routes add "default -> laptop"
-```
-
-Done. Your agents are connected to your mesh.
-
-## Usage
-
-### CLI
-
-```bash
-# Identity & Pairing
-agenthive init                              # generate peer identity
-agenthive pair --remote user@host           # pair via SSH
-agenthive pair --qr                         # QR code pairing
-
-# Links
-agenthive link --to <peer> --via ssh        # SSH tunnel (WAN)
-agenthive link --to <peer> --via tcp        # direct TCP (LAN)
-
-# Daemon
-agenthive start [--daemon]                  # start mesh daemon
-agenthive stop                              # stop daemon
-agenthive status                            # peers, links, routes
-
-# Management
-agenthive peers                             # list peers with metrics
-agenthive routes                            # list routing rules
-agenthive routes add "<selector> -> <targets>"
-agenthive routes del <route-id>
-
-# Actions
-agenthive respond allow:<request-id>        # approve agent action
-agenthive respond deny:<request-id>         # deny agent action
-
-# Interface
-agenthive tui                               # interactive dashboard
-
-# Hooks
-agenthive hook <event>                      # Claude Code hook handler
-agenthive hooks install                     # auto-configure Claude Code
-```
-
-### tmux Keybindings
-
-| Key | Action |
-|-----|--------|
-| `prefix + N` | Jump to oldest notification |
-| `prefix + S` | Notification picker (fzf) |
-| `prefix + D` | Dashboard popup |
-| `prefix + Q` | Toggle Do Not Disturb |
-
-### tmux Options
-
-```tmux
-set -g @agenthive-key-next 'N'
-set -g @agenthive-key-picker 'S'
-set -g @agenthive-key-dashboard 'D'
-set -g @agenthive-status-line 'on'
-set -g @agenthive-desktop-notifs 'on'
-set -g @agenthive-sound 'bell'
-set -g @agenthive-stale-timeout '1800'
-```
+---
 
 ## Architecture
 
 ```mermaid
 block-beta
     columns 1
-    block:layer6["Command Layer"]
-        RC["Remote agent control"]
+    block:layer5["Application"]
+        CLI["CLI: init / id / peers / start / hook / respond"]
     end
-    block:layer5["Management Layer"]
-        TUI["Distributed TUI: peers, routes, metrics"]
+    block:layer4["Routing"]
+        CRDTR["LWW-CRDT state: peers, routes, config"]
     end
-    block:layer4["Routing Layer"]
-        CRDT["CRDT-synced rules: per-agent/project/session/pane"]
+    block:layer3["Action"]
+        GATE["PreToolUse gate + atomic file queue + first-response-wins"]
     end
-    block:layer3["Action Layer"]
-        ACT["Bidirectional allow/deny via PreToolUse hooks"]
+    block:layer2["Diffusion"]
+        GS["GossipSub on /agenthive/state/v1"]
     end
-    block:layer2["Transport Layer"]
-        SSH["SSH tunnels (WAN)"]
-        TCP["TCP + Noise (LAN)"]
-        STUN["STUN (optional)"]
-    end
-    block:layer1["Integration Layer"]
-        TMUX["tmux options"]
-        TERM["Termux notifs"]
-        DESK["Desktop notifs"]
+    block:layer1["Wire (go-libp2p)"]
+        HOST["TCP + QUIC + Noise XX + Yamux"]
+        NAT["DCUtR + AutoRelay + UPnP + mDNS + embedded Circuit Relay v2"]
     end
 
-    style layer6 fill:#7aa2f7,color:#1a1b26
-    style layer5 fill:#7dcfff,color:#1a1b26
+    style layer5 fill:#7aa2f7,color:#1a1b26
     style layer4 fill:#9ece6a,color:#1a1b26
     style layer3 fill:#e0af68,color:#1a1b26
-    style layer2 fill:#f7768e,color:#1a1b26
+    style layer2 fill:#7dcfff,color:#1a1b26
     style layer1 fill:#bb9af7,color:#1a1b26
 ```
 
-### Transport
+### NAT traversal — every avenue, fail-soft
 
-- **WAN**: SSH reverse tunnels via autossh -- zero new infrastructure
-- **LAN**: Direct TCP with Noise Protocol encryption (ChaCha20-Poly1305)
-- **Optional**: STUN-assisted connections for SSH-blocked environments
+When daemon A wants to talk to daemon B, libp2p tries these in parallel and races them:
 
-### State Synchronization
+1. **Direct LAN dial** — mDNS-discovered, both peers on the same network.
+2. **Direct WAN dial** — peer advertises a public address (AutoNAT-confirmed, propagated through the CRDT).
+3. **UPnP / NAT-PMP-mapped port** — when the home router cooperates.
+4. **DCUtR hole-punch** — both peers behind NAT, coordinated via a relay; ~70% direct-success rate in 2025 ProbeLab measurements.
+5. **Relayed dial** — via Circuit Relay v2 on any of your own peers with a reachable address.
 
-Configuration, routing rules, and peer registry use **LWW-Register CRDTs** with Hybrid Logical Clocks. No leader election. No consensus protocol. All peers converge automatically.
+First success wins. The relay used in (4) and (5) is *not external infrastructure*. Every agenthive node ships with `EnableRelayService()` on, so whichever of your peers — dev server, cloud VPS, IPv6-enabled phone, home box with port-forward — happens to be reachable picks up the role automatically. You are not "running a relay." You are running agenthive.
 
-```mermaid
-sequenceDiagram
-    participant Phone as Phone (Termux)
-    participant Server as Server
-    participant Laptop as Laptop
+### Security model
 
-    Phone->>Phone: Edit route: project:api -> phone only
-    Phone->>Server: config_sync delta (SSH tunnel)
-    Phone->>Laptop: config_sync delta (SSH tunnel)
-    Server->>Server: CRDT merge (LWW)
-    Laptop->>Laptop: CRDT merge (LWW)
-    Note over Phone,Laptop: All peers converge<br/>within milliseconds
-```
+| Layer | Mechanism |
+|---|---|
+| Identity | Ed25519 keypair persisted as `~/.config/agenthive/identity.key`, mode 0600 |
+| Wire encryption | Noise XX (ChaCha20-Poly1305) on every libp2p connection |
+| Authentication | PeerID derived from pubkey; Noise XX requires private-key proof — no CA, no fingerprints |
+| Authorization | CRDT peer allow-list; GossipSub validator drops messages from unknown peers |
+| Action gate | Cryptographic action IDs (`crypto/rand`); 30s TTL for destructive actions, 300s default; atomic `O_CREAT\|O_EXCL` as first-response-wins primitive |
+| Persistence | `~/.config/agenthive/` mode 0700; state file `state.json` with atomic temp-file rename |
 
-### Notification Flow
+See [SECURITY.md](SECURITY.md) for vulnerability reporting.
 
-```mermaid
-sequenceDiagram
-    participant Agent as Claude Code
-    participant Hook as PreToolUse Hook
-    participant Daemon as agenthive daemon
-    participant Phone as Phone (Termux)
-
-    Agent->>Hook: "wants to run rm -rf /tmp/build"
-    Hook->>Daemon: action_request (Unix socket)
-    Daemon->>Daemon: evaluate routing rules
-    Daemon->>Phone: action_request (SSH tunnel)
-    Phone->>Phone: termux-notification<br/>with Allow/Deny buttons
-    Phone-->>Daemon: action_response: allow
-    Daemon-->>Hook: write response file
-    Hook-->>Agent: {"permissionDecision": "allow"}
-    Agent->>Agent: proceeds with command
-```
-
-### Security
-
-| Layer | Encryption | Authentication |
-|-------|-----------|----------------|
-| WAN links | SSH (AES-256-GCM) | SSH key-based auth |
-| LAN links | Noise Protocol (ChaCha20-Poly1305) | Ed25519 peer identity |
-| Actions | Cryptographic request IDs + TTL | Per-surface auth |
-| Storage | `0700` permissions | Peer-scoped access |
-
-### Supported Agents
-
-| Agent | Hook Integration | Action Buttons |
-|-------|-----------------|----------------|
-| Claude Code | PreToolUse, Stop, Notification | Allow/Deny via hook JSON |
-| Codex CLI | notify callback | Notification only |
-| Custom tools | Unix socket or hook library | Full support |
+---
 
 ## Tech Stack
 
-| Component | Technology |
-|-----------|-----------|
-| Daemon | Go (single static binary) |
-| TUI | [bubbletea](https://github.com/charmbracelet/bubbletea) + [lipgloss](https://github.com/charmbracelet/lipgloss) |
-| Transport | SSH / autossh (WAN), Noise Protocol (LAN) |
-| State sync | LWW-Register CRDTs + Hybrid Logical Clocks |
-| Serialization | Newline-delimited JSON |
-| Notifications | tmux options, notify-send, osascript, termux-notification |
+| Component | Choice |
+|---|---|
+| Language | Go 1.22 |
+| Transport, identity, discovery, NAT | [go-libp2p](https://github.com/libp2p/go-libp2p) |
+| State diffusion | [go-libp2p-pubsub](https://github.com/libp2p/go-libp2p-pubsub) (GossipSub v1.2) |
+| CRDT data layer | LWW-Register + LWW-Map over HLC, in-house (`internal/crdt/`) |
+| CLI | [cobra](https://github.com/spf13/cobra) |
+| Serialization | JSON, length-prefixed on streams |
+| Tests | [testify](https://github.com/stretchr/testify) + [rapid](https://pkg.go.dev/pgregory.net/rapid) (property + native Go fuzz) |
+| CI gate | `go test -race -count=1 ./...`, `go vet`, `golangci-lint`, 30s fuzz on CRDT |
 
-## Project Status
+---
 
-> **Early Development** -- architecture is designed, RFCs are written, implementation is underway.
+## Project Layout
 
-See `docs/rfcs/` for the full design rationale, including adversarial debates and judge evaluations for every major architectural decision.
+```
+agenthive/
+├── cmd/agenthive/              # cobra CLI: init, id, peers, start, hook, respond
+├── internal/
+│   ├── crdt/                   # LWW-Register, LWW-Map, HLC, StateStore (data layer)
+│   ├── identity/               # Ed25519 keypair persistence
+│   ├── transport/              # libp2p Host construction
+│   ├── discovery/              # mDNS LAN discovery
+│   ├── protocols/              # stream protocol IDs, message types, framing
+│   ├── hooks/                  # action gate, file queue, destructive classifier
+│   ├── dispatch/               # Surface interface + log surface
+│   └── daemon/                 # Run loop + Unix socket for hook IPC
+└── docs/
+    ├── rfcs/                   # design RFCs (incl. the libp2p adoption decision)
+    └── superpowers/plans/      # implementation plans
+```
+
+---
+
+## Design Rationale
+
+Every load-bearing decision has a written record. agenthive uses adversarial-debate RFCs for hard architectural choices: each option gets an advocate paper, a judge synthesizes, the verdict is filed alongside.
+
+| Document | Decides |
+|---|---|
+| `docs/rfcs/adopt-libp2p.md` | Transport, identity, discovery, NAT (current) |
+| `docs/rfcs/debate-{libp2p,quic-mtls,yggdrasil}-advocate.md` | Adversarial debate that informed the libp2p decision |
+| `docs/rfcs/action-buttons-research.md` | Bidirectional approval surface model |
+| `docs/rfcs/feature-research.md` | Feature roadmap |
+| `docs/rfcs/code-analysis.md` | Lessons from the shell-based predecessor |
+| `docs/rfcs/debate-transport-judgment.md` | Original SSH+gossip judgment (superseded by `adopt-libp2p.md`) |
+| `docs/rfcs/debate-judgment.md` | Phase-1 verdict: native tmux options over file-based IPC |
+
+The most recent decision is the [libp2p adoption RFC](docs/rfcs/adopt-libp2p.md), which collapses the previously-planned bespoke transport (SSH tunnels + autossh + custom pairing + hand-rolled Noise framing) into a single `libp2p.New(...)` call plus stream handlers.
+
+---
 
 ## Contributing
 
-Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the testing requirements (TDD; CRDT changes need property tests).
 
 ```bash
 git clone https://github.com/shaiknoorullah/agenthive.git
 cd agenthive
 go build ./...
-go test -race ./...
+go test -race -count=1 ./...
 ```
+
+---
 
 ## License
 

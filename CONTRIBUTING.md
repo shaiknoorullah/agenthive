@@ -37,14 +37,19 @@ We follow [Conventional Commits](https://www.conventionalcommits.org/):
 
 ## Architecture Decisions
 
-Before proposing architectural changes, read the design documents in `docs/rfcs/`. Major decisions were made through adversarial debate analysis. If you disagree with a decision, open an issue with your reasoning.
+Before proposing architectural changes, read the design documents in `docs/rfcs/`. Major decisions were made through adversarial debate analysis — each option gets an advocate paper, a judge synthesizes, the verdict is filed alongside. If you disagree with a decision, open an issue with your reasoning.
 
 | Document | Covers |
 |----------|--------|
-| `docs/rfcs/debate-judgment.md` | Local notification architecture |
-| `docs/rfcs/debate-transport-judgment.md` | Transport layer and mesh topology |
-| `docs/rfcs/action-buttons-research.md` | Bidirectional action system |
+| `docs/rfcs/adopt-libp2p.md` | Transport, identity, discovery, NAT (current) |
+| `docs/rfcs/debate-libp2p-advocate.md` | Adversary paper that won the transport debate |
+| `docs/rfcs/debate-quic-mtls-advocate.md` | Adversary paper (QUIC + mTLS option) |
+| `docs/rfcs/debate-yggdrasil-advocate.md` | Adversary paper (IPv6 overlay mesh option) |
+| `docs/rfcs/debate-transport-judgment.md` | Original SSH+gossip judgment (superseded by `adopt-libp2p.md`) |
+| `docs/rfcs/debate-judgment.md` | Local notification architecture (Phase 1: native tmux options) |
+| `docs/rfcs/action-buttons-research.md` | Bidirectional action approval system |
 | `docs/rfcs/feature-research.md` | Feature roadmap |
+| `docs/rfcs/code-analysis.md` | Lessons from the shell-based predecessor |
 
 ## Testing Requirements
 
@@ -61,8 +66,8 @@ Before proposing architectural changes, read the design documents in `docs/rfcs/
 
 ## Reporting Issues
 
-- **Bugs**: use the bug report template. Include OS, tmux version, steps to reproduce.
-- **Features**: use the feature request template. Check `docs/rfcs/feature-research.md` first.
+- **Bugs**: use the bug report template. Include OS, Go version, agenthive version, and steps to reproduce. tmux version only if you're exercising the (planned) tmux surface.
+- **Features**: use the feature request template. Check `docs/rfcs/feature-research.md` first; that's where the roadmap lives.
 
 ## License
 
