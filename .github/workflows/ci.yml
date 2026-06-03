@@ -26,12 +26,20 @@ jobs:
   fuzz:
     name: Fuzz
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - FuzzLWWMapJSONRoundTrip
+          - FuzzTimestampJSONRoundTrip
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: '1.22'
-      - run: go test -fuzz=Fuzz -fuzztime=30s ./internal/crdt/...
+      - env:
+          TARGET: ${{ matrix.target }}
+        run: go test -run='^$' -fuzz="^${TARGET}$" -fuzztime=30s ./internal/crdt/...
 
   lint:
     name: Lint
