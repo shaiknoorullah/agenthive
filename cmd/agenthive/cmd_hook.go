@@ -179,5 +179,9 @@ func emitHookDecision(w io.Writer, decision string) {
 	if err != nil {
 		return
 	}
-	fmt.Fprintln(w, string(body))
+	// Writes to the hook's stdout are best-effort: if Claude has already
+	// closed the pipe (e.g. session torn down) there is nothing the hook can
+	// usefully do with the error, and we don't want to spam stderr from a
+	// process Claude is about to reap. Drop the error explicitly.
+	_, _ = fmt.Fprintln(w, string(body))
 }

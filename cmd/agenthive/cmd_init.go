@@ -42,7 +42,10 @@ func newInitCmd() *cobra.Command {
 			if err := identity.Save(configDir, priv); err != nil {
 				return fmt.Errorf("save identity: %w", err)
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "identity written to %s\n", configDir)
+			// Status write is best-effort: failing here would mean a closed
+			// stdout, in which case the operator already knows the command ran
+			// because the file is on disk.
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "identity written to %s\n", configDir)
 			return nil
 		},
 	}

@@ -52,11 +52,14 @@ func newStartCmd() *cobra.Command {
 				ctx = context.Background()
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "agenthive daemon starting (config=%s)\n", configDir)
+			// Startup / shutdown banners are operator-friendly noise; if stdout
+			// is closed there is no useful recovery and the daemon's structured
+			// logs already capture the real lifecycle events.
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "agenthive daemon starting (config=%s)\n", configDir)
 			if err := d.Run(ctx); err != nil {
 				return fmt.Errorf("daemon run: %w", err)
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "agenthive daemon stopped cleanly")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "agenthive daemon stopped cleanly")
 			return nil
 		},
 	}

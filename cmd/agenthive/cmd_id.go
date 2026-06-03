@@ -47,7 +47,11 @@ func newIDCmd() *cobra.Command {
 				"/ip6/::/udp/0/quic-v1",
 			}
 			for _, t := range templates {
-				fmt.Fprintf(cmd.OutOrStdout(), "%s/p2p/%s\n", t, pid)
+				// Cobra's OutOrStdout is os.Stdout in normal use; writes to it
+				// can only fail on closed-pipe conditions where there is no
+				// useful action to take. Drop the error explicitly so errcheck
+				// is happy without losing information.
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%s/p2p/%s\n", t, pid)
 			}
 			return nil
 		},

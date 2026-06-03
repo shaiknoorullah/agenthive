@@ -48,7 +48,9 @@ func newRespondCmd() *cobra.Command {
 			}); err != nil {
 				return fmt.Errorf("write response: %w", err)
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "responded to %s: %s\n", actionID, decision)
+			// Confirmation is best-effort; the queued response is the real
+			// observable side effect.
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "responded to %s: %s\n", actionID, decision)
 			return nil
 		},
 	}

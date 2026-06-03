@@ -113,7 +113,9 @@ func newPeersAddCmd() *cobra.Command {
 			if err := savePeerState(state); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "added peer %s\n", info.ID)
+			// Confirmation is best-effort; the real outcome is the persisted
+			// state which the next `peers list` will reflect.
+			_, _ = fmt.Fprintf(cmd.OutOrStdout(), "added peer %s\n", info.ID)
 			return nil
 		},
 	}
@@ -142,10 +144,12 @@ func newPeersListCmd() *cobra.Command {
 			sort.Strings(ids)
 
 			w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
-			fmt.Fprintln(w, "PEER\tSTATUS\tLINK\tADDR\tLAST_SEEN")
+			// tabwriter buffers internally; per-row write errors are surfaced
+			// at Flush below, which is the only error we propagate.
+			_, _ = fmt.Fprintln(w, "PEER\tSTATUS\tLINK\tADDR\tLAST_SEEN")
 			for _, id := range ids {
 				info := peers[id]
-				fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
+				_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n",
 					id, info.Status, info.LinkType, info.Addr, info.LastSeen)
 			}
 			return w.Flush()
