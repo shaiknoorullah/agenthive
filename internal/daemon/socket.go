@@ -144,7 +144,11 @@ func (s *SocketServer) Run(ctx context.Context) error {
 // The connection inherits the server's context, so a server shutdown will
 // unblock any in-flight Gate.Handle waiting on the queue.
 func (s *SocketServer) handleConn(ctx context.Context, c net.Conn) {
-	defer c.Close()
+	// Best-effort close: a Unix-domain connection that the kernel has already
+	// torn down (peer process exited mid-write) will surface ErrClosed here,
+	// which is not actionable. We don't propagate the error because the
+	// surrounding goroutine has no caller to return it to.
+	defer func() { _ = c.Close() }()
 
 	var env SocketEnvelope
 	if err := protocols.ReadFramed(c, &env); err != nil {

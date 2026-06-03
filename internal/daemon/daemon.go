@@ -615,7 +615,10 @@ func (d *Daemon) dialKnownPeers(ctx context.Context) {
 // handleActionRequestStream decodes a framed ActionRequest, runs it through
 // the local gate, and writes the framed ActionResponse back.
 func (d *Daemon) handleActionRequestStream(s network.Stream) {
-	defer s.Close()
+	// libp2p streams may already be reset by the remote peer when we get here;
+	// either way there's no caller to surface the close error to, and the
+	// underlying yamux/mplex stream is reclaimed by the swarm regardless.
+	defer func() { _ = s.Close() }()
 	_ = s.SetReadDeadline(time.Now().Add(streamReadTimeout))
 
 	var req protocols.ActionRequest
@@ -642,7 +645,8 @@ func (d *Daemon) handleActionRequestStream(s network.Stream) {
 // up. This is the path that lets a remote peer's decision unblock a local
 // hook.
 func (d *Daemon) handleActionResponseStream(s network.Stream) {
-	defer s.Close()
+	// See handleActionRequestStream: stream close is best-effort.
+	defer func() { _ = s.Close() }()
 	_ = s.SetReadDeadline(time.Now().Add(streamReadTimeout))
 
 	var resp protocols.ActionResponse
@@ -663,7 +667,8 @@ func (d *Daemon) handleActionResponseStream(s network.Stream) {
 // handleNotificationStream decodes a framed Notification and fans it out to
 // the local dispatcher.
 func (d *Daemon) handleNotificationStream(s network.Stream) {
-	defer s.Close()
+	// See handleActionRequestStream: stream close is best-effort.
+	defer func() { _ = s.Close() }()
 	_ = s.SetReadDeadline(time.Now().Add(streamReadTimeout))
 
 	var n protocols.Notification
@@ -688,7 +693,8 @@ func (d *Daemon) handleNotificationStream(s network.Stream) {
 // handlePeerAnnounceStream decodes a framed PeerAnnounce and records the
 // peer's addresses in both the libp2p peerstore and the CRDT StateStore.
 func (d *Daemon) handlePeerAnnounceStream(s network.Stream) {
-	defer s.Close()
+	// See handleActionRequestStream: stream close is best-effort.
+	defer func() { _ = s.Close() }()
 	_ = s.SetReadDeadline(time.Now().Add(streamReadTimeout))
 
 	var ann protocols.PeerAnnounce
