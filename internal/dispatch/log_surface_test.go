@@ -37,7 +37,7 @@ func readLines(t *testing.T, path string) []logLine {
 	if err != nil {
 		t.Fatalf("open log: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var out []logLine
 	scanner := bufio.NewScanner(f)
@@ -67,7 +67,7 @@ func TestNewLogSurface_CreatesFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogSurface: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	if _, err := os.Stat(path); err != nil {
 		t.Fatalf("expected log file to exist: %v", err)
@@ -84,7 +84,7 @@ func TestNewLogSurface_FilePermissionsAre0600(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogSurface: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	info, err := os.Stat(path)
 	if err != nil {
@@ -113,7 +113,7 @@ func TestNewLogSurface_AppendsToExistingFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogSurface #2: %v", err)
 	}
-	defer s2.Close()
+	defer func() { _ = s2.Close() }()
 	if err := s2.Dispatch(context.Background(), protocols.Notification{Message: "two"}); err != nil {
 		t.Fatalf("dispatch #2: %v", err)
 	}
@@ -140,7 +140,7 @@ func TestLogSurface_Name(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogSurface: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	if got := s.Name(); got != "log" {
 		t.Fatalf("Name() = %q, want %q", got, "log")
@@ -153,7 +153,7 @@ func TestLogSurface_Dispatch_WritesNotificationLine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogSurface: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	n := protocols.Notification{
 		SessionID: "sess-1",
@@ -197,7 +197,7 @@ func TestLogSurface_DispatchAction_WritesActionLine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogSurface: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	a := protocols.ActionRequest{
 		ActionID:  "act-1",
@@ -236,7 +236,7 @@ func TestLogSurface_MultipleDispatches_OneLinePerCall(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogSurface: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	for i := 0; i < 5; i++ {
 		if err := s.Dispatch(context.Background(), protocols.Notification{Message: fmt.Sprintf("m-%d", i)}); err != nil {
@@ -275,7 +275,7 @@ func TestLogSurface_ConcurrentDispatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogSurface: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	const goroutines = 32
 	const perGoroutine = 20
@@ -363,7 +363,7 @@ func TestLogSurface_HonorsCtxCancellation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewLogSurface: %v", err)
 	}
-	defer s.Close()
+	defer func() { _ = s.Close() }()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

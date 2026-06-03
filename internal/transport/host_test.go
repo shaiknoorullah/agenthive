@@ -61,7 +61,7 @@ func TestNew_HasPeerID(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	defer h.Close()
+	defer func() { _ = h.Close() }()
 
 	require.NotEqual(t, peer.ID(""), h.ID())
 
@@ -78,7 +78,7 @@ func TestNew_DefaultListenAddrsWhenEmpty(t *testing.T) {
 	priv := newTestIdentity(t)
 	h, err := New(ctx, Config{Identity: priv})
 	require.NoError(t, err)
-	defer h.Close()
+	defer func() { _ = h.Close() }()
 
 	require.NotEmpty(t, h.Addrs(), "host with no configured addrs must still listen on the package defaults")
 }
@@ -88,7 +88,7 @@ func TestNew_ListensOnConfiguredAddrs(t *testing.T) {
 	defer cancel()
 
 	h := newTestHost(t, ctx)
-	defer h.Close()
+	defer func() { _ = h.Close() }()
 
 	addrs := h.Addrs()
 	require.NotEmpty(t, addrs)
@@ -112,7 +112,7 @@ func TestMultiaddrsFor_IncludesPeerID(t *testing.T) {
 	defer cancel()
 
 	h := newTestHost(t, ctx)
-	defer h.Close()
+	defer func() { _ = h.Close() }()
 
 	mas := MultiaddrsFor(h)
 	require.NotEmpty(t, mas)
@@ -132,9 +132,9 @@ func TestNew_TwoHostsCanDialEachOther(t *testing.T) {
 	defer cancel()
 
 	a := newTestHost(t, ctx)
-	defer a.Close()
+	defer func() { _ = a.Close() }()
 	b := newTestHost(t, ctx)
-	defer b.Close()
+	defer func() { _ = b.Close() }()
 
 	// Connect b to a using a's listen addrs. peer.AddrInfo carries both ID
 	// and multiaddrs; libp2p picks one and dials it.
@@ -175,7 +175,7 @@ func TestNew_ContextRespected(t *testing.T) {
 		return
 	}
 	require.NotNil(t, h)
-	defer h.Close()
+	defer func() { _ = h.Close() }()
 }
 
 // TestNew_InvalidListenAddrFails confirms invalid multiaddr strings surface as

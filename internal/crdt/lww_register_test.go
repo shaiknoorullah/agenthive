@@ -265,6 +265,9 @@ func TestLWWRegister_Property_MergeIdempotent(t *testing.T) {
 func cloneRegister[T any](src *LWWRegister[T]) *LWWRegister[T] {
 	data, _ := json.Marshal(src)
 	var dst LWWRegister[T]
-	json.Unmarshal(data, &dst)
+	// Marshal/Unmarshal round-trip on our own type is total: if Marshal
+	// produced bytes, Unmarshal of those bytes back into the same shape
+	// cannot fail. Errcheck still wants us to acknowledge the return.
+	_ = json.Unmarshal(data, &dst)
 	return &dst
 }

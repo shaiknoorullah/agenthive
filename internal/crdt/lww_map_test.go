@@ -171,13 +171,13 @@ func TestLWWMap_Property_MergeCommutative(t *testing.T) {
 		// merge(A,B)
 		abData, _ := json.Marshal(mapA)
 		var ab LWWMap[string]
-		json.Unmarshal(abData, &ab)
+		require.NoError(t, json.Unmarshal(abData, &ab))
 		ab.Merge(mapB)
 
 		// merge(B,A)
 		baData, _ := json.Marshal(mapB)
 		var ba LWWMap[string]
-		json.Unmarshal(baData, &ba)
+		require.NoError(t, json.Unmarshal(baData, &ba))
 		ba.Merge(mapA)
 
 		// All keys should have same values
@@ -225,7 +225,7 @@ func TestLWWMap_Property_MergeAssociative(t *testing.T) {
 		cloneMap := func(m *LWWMap[string]) *LWWMap[string] {
 			data, _ := json.Marshal(m)
 			var c LWWMap[string]
-			json.Unmarshal(data, &c)
+			require.NoError(t, json.Unmarshal(data, &c))
 			return &c
 		}
 

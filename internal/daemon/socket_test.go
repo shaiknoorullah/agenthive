@@ -271,7 +271,7 @@ func TestRun_ActionRequest_RoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	req := SocketEnvelope{
 		Kind: KindActionRequest,
@@ -334,7 +334,7 @@ func TestRun_UnknownKind_RepliesWithError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	req := SocketEnvelope{
 		Kind:    "totally-bogus",
@@ -388,7 +388,7 @@ func TestRun_GateUnblockOnServerShutdown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	req := SocketEnvelope{
 		Kind: KindActionRequest,
@@ -455,7 +455,7 @@ func TestRun_RejectsActionRequestWithEmptyActionID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	req := SocketEnvelope{
 		Kind: KindActionRequest,
@@ -550,7 +550,7 @@ func TestRun_ConcurrentConnections(t *testing.T) {
 				resultErr[i] = err
 				return
 			}
-			defer conn.Close()
+			defer func() { _ = conn.Close() }()
 			req := SocketEnvelope{
 				Kind: KindActionRequest,
 				Payload: mustMarshal(t, protocols.ActionRequest{
