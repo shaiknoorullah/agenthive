@@ -4,26 +4,29 @@ agenthive is one Go binary running on every device you own. There is no client/s
 
 ## The three layers
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│  Application                                                      │
-│  CLI (init, id, peers, routes, start, hook, respond, tui)         │
-│  TUI (bubbletea: peers / routes / actions / logs)                 │
-└──────────────────────────────────────────────────────────────────┘
-┌──────────────────────────────────────────────────────────────────┐
-│  Coordination                                                     │
-│  LWW-CRDT StateStore (peers, routes, config)                      │
-│  HLC timestamps {Wall, Counter, PeerID}                           │
-│  Route matcher → target peer set per notification                 │
-│  Action gate (PreToolUse + atomic file queue + first-response)    │
-└──────────────────────────────────────────────────────────────────┘
-┌──────────────────────────────────────────────────────────────────┐
-│  Wire (go-libp2p)                                                 │
-│  TCP + QUIC transports • Noise XX security • Yamux multiplexing   │
-│  Identify, AutoNAT v2, AutoRelay v2, DCUtR hole-punching          │
-│  Circuit Relay v2 (every node)  •  UPnP / NAT-PMP  •  mDNS        │
-│  GossipSub on /agenthive/state/v1                                 │
-└──────────────────────────────────────────────────────────────────┘
+```mermaid
+block-beta
+  columns 1
+  block:application["Application"]
+    CLI["CLI: init / id / peers / routes / start / hook / respond / tui"]
+    TUI["TUI: bubbletea — peers / routes / actions / logs"]
+  end
+  block:coordination["Coordination"]
+    Store["LWW-CRDT StateStore (peers, routes, config)"]
+    HLC["HLC timestamps {Wall, Counter, PeerID}"]
+    Router["Route matcher → target peer set per notification"]
+    Gate["Action gate (PreToolUse + atomic file queue + first-response-wins)"]
+  end
+  block:wire["Wire — go-libp2p"]
+    Transports["TCP + QUIC • Noise XX • Yamux"]
+    NAT["Identify • AutoNAT v2 • AutoRelay v2 • DCUtR"]
+    Mesh["Circuit Relay v2 (every node) • UPnP / NAT-PMP • mDNS"]
+    Gossip["GossipSub on /agenthive/state/v1"]
+  end
+
+  style application fill:#7aa2f7,color:#1a1b26
+  style coordination fill:#9ece6a,color:#1a1b26
+  style wire fill:#bb9af7,color:#1a1b26
 ```
 
 ### Wire
