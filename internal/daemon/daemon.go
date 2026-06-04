@@ -12,13 +12,18 @@
 package daemon
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -36,6 +41,7 @@ import (
 	"github.com/shaiknoorullah/agenthive/internal/dispatch"
 	"github.com/shaiknoorullah/agenthive/internal/hooks"
 	"github.com/shaiknoorullah/agenthive/internal/protocols"
+	"github.com/shaiknoorullah/agenthive/internal/router"
 	"github.com/shaiknoorullah/agenthive/internal/transport"
 )
 
@@ -88,7 +94,9 @@ type Daemon struct {
 	sub        *pubsub.Subscription
 	dispatcher *dispatch.Dispatcher
 	gate       *hooks.Gate
+	queue      *hooks.Queue
 	socket     *SocketServer
+	matcher    *router.Matcher
 	mdnsStop   func() error
 
 	// mu protects the mutable fields above against concurrent access from
@@ -165,14 +173,21 @@ func New(cfg Config) (*Daemon, error) {
 	gate := hooks.NewGate(queue, dispatcher)
 	socket := NewSocketServer(cfg.SocketPath, gate)
 
-	return &Daemon{
+	d := &Daemon{
 		cfg:        cfg,
 		state:      state,
 		dispatcher: dispatcher,
 		gate:       gate,
+		queue:      queue,
 		socket:     socket,
 		stopCh:     make(chan struct{}),
-	}, nil
+	}
+	// Register the daemon itself as the read-only query backend used to
+	// answer list_* socket envelopes. The socket server holds only this
+	// interface so unit tests can swap in a stub without dragging the full
+	// daemon in.
+	socket.SetQueryBackend(d)
+	return d, nil
 }
 
 // Host returns the libp2p host, or nil if Run has not been called yet (or
@@ -232,10 +247,15 @@ func (d *Daemon) Run(ctx context.Context) error {
 		}
 	}()
 
-	// Step 1: build the libp2p Host.
+	// Step 1: build the libp2p Host. The PeerSource closure surfaces the
+	// CRDT peer set to AutoRelay so reservations are requested from peers
+	// the mesh already knows about, closing the no-op gap the libp2p RFC
+	// flagged. We honor the caller's num cap and the supplied ctx so a
+	// shutdown unblocks any pending receive in autorelay.
 	h, err := transport.New(runCtx, transport.Config{
 		Identity:    d.cfg.Identity,
 		ListenAddrs: d.cfg.ListenAddrs,
+		PeerSource:  d.peerSource,
 	})
 	if err != nil {
 		return fmt.Errorf("daemon: build host: %w", err)
@@ -259,11 +279,28 @@ func (d *Daemon) Run(ctx context.Context) error {
 		return fmt.Errorf("daemon: subscribe %s: %w", protocols.TopicState, err)
 	}
 
+	// Step 2b: build the route matcher. It binds to the host's PeerID so
+	// "ALL" expansions never include self and so target rows referencing
+	// our own ID are skipped.
+	matcher := router.NewMatcher(d.state, h.ID())
+
+	// Step 2c: build the tmux and desktop surfaces and register them on the
+	// dispatcher. TmuxSurface is conditional: writing to @notif-* options on
+	// a system where tmux is not installed would just produce noise on every
+	// dispatch, so we skip registration when tmux is absent from PATH. The
+	// desktop surface is unconditional — on unsupported OSes it self-detects
+	// and reports "desktop:unsupported" while remaining a no-op at dispatch.
+	if _, lookErr := exec.LookPath("tmux"); lookErr == nil {
+		d.dispatcher.Add(dispatch.NewTmuxSurface(dispatch.NewOSExecutor()))
+	}
+	d.dispatcher.Add(dispatch.NewDesktopSurface(dispatch.NewOSExecutor()))
+
 	d.mu.Lock()
 	d.host = h
 	d.gossipsub = gs
 	d.topic = topic
 	d.sub = sub
+	d.matcher = matcher
 	d.mu.Unlock()
 
 	// Step 3: register stream handlers. The host routes incoming streams by
@@ -343,6 +380,7 @@ func (d *Daemon) Run(ctx context.Context) error {
 	d.gossipsub = nil
 	d.topic = nil
 	d.sub = nil
+	d.matcher = nil
 	d.mu.Unlock()
 
 	// Persist state to state.json. This is the one shutdown step the plan
@@ -737,13 +775,253 @@ func (d *Daemon) handlePeerAnnounceStream(s network.Stream) {
 }
 
 // deliverResponse persists a remote ActionResponse so the local Gate.Handle
-// can pick it up. We re-derive the queue dir from the daemon's ConfigDir
-// (same convention as New).
+// can pick it up. Reuses the queue constructed in New so we never open a
+// second handle to the same on-disk directory.
 func (d *Daemon) deliverResponse(resp protocols.ActionResponse) error {
-	queueDir := filepath.Join(d.cfg.ConfigDir, "queue")
-	q, err := hooks.NewQueue(queueDir)
-	if err != nil {
-		return err
+	return d.queue.WriteResponse(resp)
+}
+
+// peerSource is the AutoRelay PeerSource closure passed to transport.New. It
+// drains up to num peers from the CRDT peer set, skipping self and entries
+// whose recorded addr is missing or unparseable. The returned channel is
+// closed when the budget is exhausted or ctx is done.
+//
+// The closure is registered before the host exists, so it is safe to call
+// when d.host is nil — we filter self only when an ID is available.
+func (d *Daemon) peerSource(ctx context.Context, num int) <-chan peer.AddrInfo {
+	out := make(chan peer.AddrInfo)
+	go func() {
+		defer close(out)
+		if num <= 0 {
+			return
+		}
+		d.mu.RLock()
+		h := d.host
+		d.mu.RUnlock()
+		var selfID peer.ID
+		if h != nil {
+			selfID = h.ID()
+		}
+		sent := 0
+		for id, info := range d.state.ListPeers() {
+			if sent >= num {
+				return
+			}
+			pid, err := peer.Decode(id)
+			if err != nil {
+				continue
+			}
+			if h != nil && pid == selfID {
+				continue
+			}
+			if info.Addr == "" {
+				continue
+			}
+			mAddr, err := ma.NewMultiaddr(info.Addr)
+			if err != nil {
+				continue
+			}
+			ai := peer.AddrInfo{ID: pid, Addrs: []ma.Multiaddr{mAddr}}
+			select {
+			case <-ctx.Done():
+				return
+			case out <- ai:
+				sent++
+			}
+		}
+	}()
+	return out
+}
+
+// DispatchNotification fans a notification out to local surfaces and to any
+// remote peer whose route matches. Plan L5.B step 4: ask the matcher for
+// target peers first; route the libp2p stream only to those peers; always
+// also call dispatcher.Dispatch for local surfaces.
+//
+// If Run has not been called (or has already returned), DispatchNotification
+// still invokes the local dispatcher — the matcher and host are optional. A
+// per-peer stream write failure is logged but does not abort the fan-out.
+func (d *Daemon) DispatchNotification(ctx context.Context, n protocols.Notification) error {
+	// Local dispatcher first so a remote-write failure does not starve the
+	// local surfaces (log + tmux + desktop).
+	if errs := d.dispatcher.Dispatch(ctx, n); len(errs) > 0 {
+		for _, err := range errs {
+			if err == nil {
+				continue
+			}
+			log.Printf("daemon: DispatchNotification: local: %v", err)
+		}
 	}
-	return q.WriteResponse(resp)
+
+	d.mu.RLock()
+	h := d.host
+	m := d.matcher
+	d.mu.RUnlock()
+	if h == nil || m == nil {
+		return nil
+	}
+
+	targets := m.Targets(n)
+	if len(targets) == 0 {
+		return nil
+	}
+	for _, pid := range targets {
+		pid := pid
+		go d.sendNotificationStream(ctx, h, pid, n)
+	}
+	return nil
+}
+
+// sendNotificationStream opens a ProtoNotification stream to pid and writes
+// the framed notification. Errors are logged because the caller has no
+// channel to receive a per-peer error and per-peer reachability is a
+// best-effort property of the mesh, not a hard contract.
+func (d *Daemon) sendNotificationStream(ctx context.Context, h host.Host, pid peer.ID, n protocols.Notification) {
+	dialCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	s, err := h.NewStream(dialCtx, pid, protocol.ID(protocols.ProtoNotification))
+	if err != nil {
+		log.Printf("daemon: notify stream open %s: %v", pid, err)
+		return
+	}
+	defer func() { _ = s.Close() }()
+	if err := protocols.WriteFramed(s, n); err != nil {
+		log.Printf("daemon: notify stream write %s: %v", pid, err)
+	}
+}
+
+// ListPeers implements the QueryBackend surface: returns the CRDT peer set as
+// a deterministically-sorted slice (by peer ID) so the TUI's render is
+// stable across polls.
+func (d *Daemon) ListPeers() []PeerEntry {
+	src := d.state.ListPeers()
+	if len(src) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(src))
+	for k := range src {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	out := make([]PeerEntry, 0, len(keys))
+	for _, k := range keys {
+		out = append(out, PeerEntry{ID: k, Info: src[k]})
+	}
+	return out
+}
+
+// ListRoutes implements the QueryBackend surface: returns the routes table
+// as a deterministically-sorted slice (by route ID).
+func (d *Daemon) ListRoutes() []RouteEntry {
+	src := d.state.ListRoutes()
+	if len(src) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(src))
+	for k := range src {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	out := make([]RouteEntry, 0, len(keys))
+	for _, k := range keys {
+		out = append(out, RouteEntry{ID: k, Rule: src[k]})
+	}
+	return out
+}
+
+// ListActions implements the QueryBackend surface: scans the queue directory
+// for *.pending files and decodes each into an ActionRequest. The list is
+// sorted by ActionID so the TUI render is stable across polls.
+//
+// A missing queue directory is not an error — it just means no actions have
+// ever been written. We return an empty slice in that case.
+func (d *Daemon) ListActions() ([]ActionEntry, error) {
+	queueDir := filepath.Join(d.cfg.ConfigDir, "queue")
+	entries, err := os.ReadDir(queueDir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("read queue: %w", err)
+	}
+	var out []ActionEntry
+	for _, e := range entries {
+		name := e.Name()
+		if !strings.HasSuffix(name, ".pending") {
+			continue
+		}
+		path := filepath.Join(queueDir, name)
+		body, err := os.ReadFile(path)
+		if err != nil {
+			// A pending file that vanished between ReadDir and ReadFile is
+			// fine — concurrent gate progress race. Skip silently.
+			if errors.Is(err, os.ErrNotExist) {
+				continue
+			}
+			log.Printf("daemon: ListActions: read %s: %v", path, err)
+			continue
+		}
+		var req protocols.ActionRequest
+		if err := json.Unmarshal(body, &req); err != nil {
+			log.Printf("daemon: ListActions: decode %s: %v", path, err)
+			continue
+		}
+		out = append(out, ActionEntry{Action: req})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].Action.ActionID < out[j].Action.ActionID
+	})
+	return out, nil
+}
+
+// TailLogLines implements the QueryBackend surface: returns up to limit most
+// recent lines from the JSONL log file. Each entry is one raw line — the TUI
+// is responsible for parsing it via json.Unmarshal into a logEnvelope shape.
+//
+// A missing log file is not an error; it just means nothing has been logged
+// yet. We return an empty slice in that case.
+func (d *Daemon) TailLogLines(limit int) ([]string, error) {
+	if limit <= 0 {
+		return nil, nil
+	}
+	f, err := os.Open(d.cfg.LogPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("open log: %w", err)
+	}
+	defer func() { _ = f.Close() }()
+
+	// A ring buffer caps memory to the requested window even if the log
+	// runs to millions of lines. bufio.Scanner's default 64 KiB token cap
+	// is generous for a JSONL line written by LogSurface (one envelope per
+	// line, payload bounded by Notification/ActionRequest field sizes).
+	ring := make([]string, limit)
+	count := 0
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		ring[count%limit] = scanner.Text()
+		count++
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("scan log: %w", err)
+	}
+	if count == 0 {
+		return nil, nil
+	}
+	n := count
+	if n > limit {
+		n = limit
+	}
+	out := make([]string, n)
+	if count <= limit {
+		copy(out, ring[:count])
+		return out, nil
+	}
+	start := count % limit
+	for i := 0; i < n; i++ {
+		out[i] = ring[(start+i)%limit]
+	}
+	return out, nil
 }

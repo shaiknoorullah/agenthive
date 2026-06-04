@@ -10,6 +10,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/shaiknoorullah/agenthive/internal/crdt"
 	"github.com/shaiknoorullah/agenthive/internal/hooks"
 	"github.com/shaiknoorullah/agenthive/internal/protocols"
 )
@@ -19,10 +20,23 @@ import (
 // the libp2p stream framing in package protocols) where each envelope is a
 // SocketEnvelope with a discriminator (Kind) and a raw JSON payload sized to
 // the discriminator.
+//
+// The list_* request kinds power the TUI's snapshot polling (cmd_tui). Each
+// request kind has a matching response kind so the client can tell a response
+// to its query from an unrelated envelope on the same fd.
 const (
 	KindActionRequest  = "action_request"
 	KindActionResponse = "action_response"
 	KindError          = "error"
+
+	KindListPeers           = "list_peers"
+	KindListPeersResponse   = "list_peers_response"
+	KindListRoutes          = "list_routes"
+	KindListRoutesResponse  = "list_routes_response"
+	KindListActions         = "list_actions"
+	KindListActionsResponse = "list_actions_response"
+	KindListLogs            = "list_logs"
+	KindListLogsResponse    = "list_logs_response"
 )
 
 // SocketEnvelope is the on-wire frame used between cmd/agenthive's hook
@@ -40,6 +54,71 @@ type SocketError struct {
 	Message string `json:"message"`
 }
 
+// PeerEntry is a single (id, info) pair in a ListPeersResponse. We do not
+// expose the underlying map[string]PeerInfo directly so the wire format has a
+// stable, ordered shape the TUI can render row by row.
+type PeerEntry struct {
+	ID   string        `json:"id"`
+	Info crdt.PeerInfo `json:"info"`
+}
+
+// ListPeersResponse is the body of a list_peers_response envelope.
+type ListPeersResponse struct {
+	Peers []PeerEntry `json:"peers"`
+}
+
+// RouteEntry is a single (id, rule) pair in a ListRoutesResponse.
+type RouteEntry struct {
+	ID   string         `json:"id"`
+	Rule crdt.RouteRule `json:"rule"`
+}
+
+// ListRoutesResponse is the body of a list_routes_response envelope.
+type ListRoutesResponse struct {
+	Routes []RouteEntry `json:"routes"`
+}
+
+// ActionEntry is a single pending action in a ListActionsResponse. Action
+// carries the full ActionRequest so the TUI can render the tool name + input
+// without a second round-trip.
+type ActionEntry struct {
+	Action protocols.ActionRequest `json:"action"`
+}
+
+// ListActionsResponse is the body of a list_actions_response envelope.
+type ListActionsResponse struct {
+	Actions []ActionEntry `json:"actions"`
+}
+
+// ListLogsRequest is the body of a list_logs request envelope. Limit is the
+// maximum number of recent log lines to return; <=0 means "use the server's
+// default cap" (currently 500).
+type ListLogsRequest struct {
+	Limit int `json:"limit,omitempty"`
+}
+
+// ListLogsResponse is the body of a list_logs_response envelope. Lines are
+// raw JSONL strings (each line is one logEnvelope as written by LogSurface).
+// The TUI parses them per-row so a single malformed line cannot crash the
+// view.
+type ListLogsResponse struct {
+	Lines []string `json:"lines"`
+}
+
+// defaultLogLimit caps the number of lines returned by list_logs when the
+// caller does not specify Limit. The TUI's logs tab paints at most ~50 rows
+// at a time but we hand back enough headroom to scroll without re-querying.
+const defaultLogLimit = 500
+
+// QueryBackend is the read-only surface SocketServer needs in order to answer
+// list_* envelopes. The Daemon implements it; tests can substitute a stub.
+type QueryBackend interface {
+	ListPeers() []PeerEntry
+	ListRoutes() []RouteEntry
+	ListActions() ([]ActionEntry, error)
+	TailLogLines(limit int) ([]string, error)
+}
+
 // SocketServer accepts hook IPC connections on a Unix socket. One connection
 // is one request and one response.
 //
@@ -54,14 +133,25 @@ type SocketError struct {
 // On graceful shutdown via the supplied context, the socket file is unlinked
 // so subsequent restarts can bind cleanly.
 type SocketServer struct {
-	path string
-	gate *hooks.Gate
+	path  string
+	gate  *hooks.Gate
+	query QueryBackend
 }
 
 // NewSocketServer returns a SocketServer that listens on path and routes
-// action_request envelopes through gate.
+// action_request envelopes through gate. query may be nil — in that case
+// list_* envelopes return an error envelope. Production callers pass the
+// Daemon itself (which implements QueryBackend) so the TUI can query state.
 func NewSocketServer(path string, gate *hooks.Gate) *SocketServer {
 	return &SocketServer{path: path, gate: gate}
+}
+
+// SetQueryBackend installs the read-only state backend used to answer list_*
+// envelopes. The Daemon calls this after construction so the SocketServer
+// can survive being built before the daemon has finished wiring itself up.
+// Safe to call before Run.
+func (s *SocketServer) SetQueryBackend(q QueryBackend) {
+	s.query = q
 }
 
 // Run binds the Unix socket and accepts connections until ctx is done.
@@ -168,6 +258,22 @@ func (s *SocketServer) handleConn(ctx context.Context, c net.Conn) {
 			return
 		}
 		s.handleActionRequest(ctx, c, req)
+	case KindListPeers:
+		s.handleListPeers(c)
+	case KindListRoutes:
+		s.handleListRoutes(c)
+	case KindListActions:
+		s.handleListActions(c)
+	case KindListLogs:
+		var req ListLogsRequest
+		// Empty payload is fine — defaults apply.
+		if len(env.Payload) > 0 && string(env.Payload) != "null" {
+			if err := json.Unmarshal(env.Payload, &req); err != nil {
+				s.writeError(c, fmt.Sprintf("decode list_logs: %v", err))
+				return
+			}
+		}
+		s.handleListLogs(c, req)
 	default:
 		s.writeError(c, fmt.Sprintf("unknown envelope kind %q", env.Kind))
 	}
@@ -194,6 +300,74 @@ func (s *SocketServer) handleActionRequest(ctx context.Context, c net.Conn, req 
 	out.Payload = body
 	if err := protocols.WriteFramed(c, out); err != nil {
 		log.Printf("daemon: socket: write response: %v", err)
+	}
+}
+
+// handleListPeers writes a list_peers_response envelope built from the
+// query backend's current snapshot.
+func (s *SocketServer) handleListPeers(c net.Conn) {
+	if s.query == nil {
+		s.writeError(c, "list_peers: query backend not installed")
+		return
+	}
+	resp := ListPeersResponse{Peers: s.query.ListPeers()}
+	s.writeResponse(c, KindListPeersResponse, resp)
+}
+
+// handleListRoutes writes a list_routes_response envelope.
+func (s *SocketServer) handleListRoutes(c net.Conn) {
+	if s.query == nil {
+		s.writeError(c, "list_routes: query backend not installed")
+		return
+	}
+	resp := ListRoutesResponse{Routes: s.query.ListRoutes()}
+	s.writeResponse(c, KindListRoutesResponse, resp)
+}
+
+// handleListActions writes a list_actions_response envelope.
+func (s *SocketServer) handleListActions(c net.Conn) {
+	if s.query == nil {
+		s.writeError(c, "list_actions: query backend not installed")
+		return
+	}
+	actions, err := s.query.ListActions()
+	if err != nil {
+		s.writeError(c, fmt.Sprintf("list_actions: %v", err))
+		return
+	}
+	s.writeResponse(c, KindListActionsResponse, ListActionsResponse{Actions: actions})
+}
+
+// handleListLogs writes a list_logs_response envelope. The TailLogLines call
+// is capped at defaultLogLimit when req.Limit is non-positive.
+func (s *SocketServer) handleListLogs(c net.Conn, req ListLogsRequest) {
+	if s.query == nil {
+		s.writeError(c, "list_logs: query backend not installed")
+		return
+	}
+	limit := req.Limit
+	if limit <= 0 {
+		limit = defaultLogLimit
+	}
+	lines, err := s.query.TailLogLines(limit)
+	if err != nil {
+		s.writeError(c, fmt.Sprintf("list_logs: %v", err))
+		return
+	}
+	s.writeResponse(c, KindListLogsResponse, ListLogsResponse{Lines: lines})
+}
+
+// writeResponse marshals payload as JSON and writes a framed envelope of the
+// supplied kind. A marshal error or a transport-level write error is logged
+// but never returned — the connection is about to close anyway.
+func (s *SocketServer) writeResponse(c net.Conn, kind string, payload any) {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		s.writeError(c, fmt.Sprintf("encode %s: %v", kind, err))
+		return
+	}
+	if err := protocols.WriteFramed(c, SocketEnvelope{Kind: kind, Payload: body}); err != nil {
+		log.Printf("daemon: socket: write %s: %v", kind, err)
 	}
 }
 
