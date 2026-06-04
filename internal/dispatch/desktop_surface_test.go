@@ -51,38 +51,6 @@ func (r *recordingExec) snapshot() []recordedCall {
 	return out
 }
 
-// reset clears the call buffer so a test can verify a subsequent phase in
-// isolation.
-func (r *recordingExec) reset() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.calls = nil
-}
-
-// findCall returns the first recorded call whose argv contains the literal
-// option name (e.g. "@notif-msg") and reports whether one was found.
-func findCall(calls []recordedCall, option string) (recordedCall, bool) {
-	for _, c := range calls {
-		for _, a := range c.args {
-			if a == option {
-				return c, true
-			}
-		}
-	}
-	return recordedCall{}, false
-}
-
-// optionValue returns the argv element immediately following option in the
-// recorded call, which is the value tmux would set for that option name.
-func optionValue(c recordedCall, option string) (string, bool) {
-	for i, a := range c.args {
-		if a == option && i+1 < len(c.args) {
-			return c.args[i+1], true
-		}
-	}
-	return "", false
-}
-
 func newDesktopSurfaceForOS(t *testing.T, exec CmdExecutor, osName string) *DesktopSurface {
 	t.Helper()
 	d := NewDesktopSurface(exec)

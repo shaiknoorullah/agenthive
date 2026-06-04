@@ -219,7 +219,9 @@ func TestLogsModel_View_GoldenAllLevels(t *testing.T) {
 	)
 	tm.Send(LogsUpdateMsg{Entries: sampleEntries()})
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}}) // move cursor to row 1
-	tm.Quit()
+	if err := tm.Quit(); err != nil {
+		t.Fatalf("Quit: %v", err)
+	}
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 
 	out, err := io.ReadAll(tm.FinalOutput(t))
@@ -239,7 +241,9 @@ func TestLogsModel_View_GoldenCritFilter(t *testing.T) {
 	)
 	tm.Send(LogsUpdateMsg{Entries: sampleEntries()})
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'3'}})
-	tm.Quit()
+	if err := tm.Quit(); err != nil {
+		t.Fatalf("Quit: %v", err)
+	}
 	tm.WaitFinished(t, teatest.WithFinalTimeout(2*time.Second))
 
 	out, err := io.ReadAll(tm.FinalOutput(t))
