@@ -27,6 +27,15 @@ import (
 // read this variable rather than re-parsing the flag themselves.
 var configDir string
 
+// version, commit, and date are populated by -ldflags at release-build
+// time (see .goreleaser.yml). The default values are used for unreleased
+// `go build` and `go install` invocations from a working tree.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 // defaultConfigDir returns ~/.config/agenthive (or just .config/agenthive in
 // the unlikely case the home directory cannot be resolved). It is called
 // once at root construction so subcommands inherit a stable default even
@@ -43,14 +52,27 @@ func defaultConfigDir() string {
 // run the CLI without exec.Command — the package goes out of its way to
 // avoid touching os.Stdin / os.Stdout directly so this round-trips cleanly.
 func newRootCmd() *cobra.Command {
+	var showVersion bool
+
 	root := &cobra.Command{
 		Use:           "agenthive",
 		Short:         "agenthive — libp2p-backed personal agent mesh",
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if showVersion {
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(),
+					"agenthive %s (commit %s, built %s)\n",
+					version, commit, date)
+				return nil
+			}
+			return cmd.Help()
+		},
 	}
 	root.PersistentFlags().StringVar(&configDir, "config-dir", defaultConfigDir(),
 		"path to the agenthive config directory")
+	root.Flags().BoolVar(&showVersion, "version", false,
+		"print version information and exit")
 
 	root.AddCommand(newInitCmd())
 	root.AddCommand(newIDCmd())
@@ -58,6 +80,8 @@ func newRootCmd() *cobra.Command {
 	root.AddCommand(newStartCmd())
 	root.AddCommand(newHookCmd())
 	root.AddCommand(newRespondCmd())
+	root.AddCommand(newRoutesCmd())
+	root.AddCommand(newTUICmd())
 
 	return root
 }

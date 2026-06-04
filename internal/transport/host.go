@@ -47,18 +47,33 @@ type Config struct {
 	ListenAddrs []string
 	// EnableMDNS is informational only; the discovery package owns mDNS.
 	EnableMDNS bool
+	// PeerSource is the AutoRelay peer-source closure. If nil, the host
+	// uses an internal no-op closure that returns an empty closed channel
+	// (relays must be dialled directly). The daemon supplies a closure
+	// that surfaces the CRDT peer set so AutoRelay can request reservations
+	// from peers the mesh already knows about.
+	PeerSource func(ctx context.Context, num int) <-chan peer.AddrInfo
 }
 
-// emptyPeerSource is the autorelay PeerSource used for this push. It returns
-// an empty closed channel — no relays are ever offered. The CRDT state layer
-// will provide a real source in a follow-up push (relays discovered via the
-// peer-state topic). Until then AutoRelay is wired but inert; static relay
-// connections still work because libp2p will reserve slots on any reachable
-// relay it manages to connect to via direct dialing.
+// emptyPeerSource is the default autorelay PeerSource. It returns an empty
+// closed channel — no relays are ever offered. Callers that want a real
+// peer set must supply Config.PeerSource; the daemon does, surfacing the
+// CRDT peer set so AutoRelay can request reservations from peers the mesh
+// already knows about.
 func emptyPeerSource(ctx context.Context, num int) <-chan peer.AddrInfo {
 	ch := make(chan peer.AddrInfo)
 	close(ch)
 	return ch
+}
+
+// peerSourceOrDefault returns ps if non-nil, otherwise the empty no-op
+// closure. Pulled into a helper so Config.PeerSource = nil is the documented
+// default rather than a constructor branch in New.
+func peerSourceOrDefault(ps func(ctx context.Context, num int) <-chan peer.AddrInfo) func(ctx context.Context, num int) <-chan peer.AddrInfo {
+	if ps == nil {
+		return emptyPeerSource
+	}
+	return ps
 }
 
 // New constructs a libp2p Host wired with the agenthive transport options.
@@ -117,12 +132,13 @@ func New(ctx context.Context, cfg Config) (host.Host, error) {
 		libp2p.EnableHolePunching(),
 
 		// Circuit-relay v2: be a relay (modest defaults) and use
-		// auto-relay to find one to register with. The peer source is
-		// currently a no-op; CRDT-driven peer sourcing ships in a
-		// follow-up push.
+		// auto-relay to find one to register with. If the caller
+		// supplied a Config.PeerSource (the daemon does, surfacing
+		// the CRDT peer set), use it; otherwise fall back to the
+		// no-op closure that returns an empty closed channel.
 		libp2p.EnableRelayService(),
 		libp2p.EnableAutoRelayWithPeerSource(
-			emptyPeerSource,
+			peerSourceOrDefault(cfg.PeerSource),
 			autorelay.WithMinCandidates(1),
 		),
 	}
