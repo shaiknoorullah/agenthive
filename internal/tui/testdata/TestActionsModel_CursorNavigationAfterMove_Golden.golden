@@ -1,0 +1,4 @@
+Pending Actions
+  ID            TOOL        INPUT                           EXPIRES
+  act-001       Bash        rm -rf /tmp/foo                 2026-06-04T10:02:00Z
+> act-002       Write       echo hi > /tmp/bar              2026-06-04T10:02:00Z
