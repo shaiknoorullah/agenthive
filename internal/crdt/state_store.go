@@ -151,6 +151,9 @@ func (s *StateStore) MergeMaps(peers *LWWMap[PeerInfo], routes *LWWMap[RouteRule
 	if config != nil {
 		s.config.Merge(config)
 	}
+	// Keep the local HLC strictly ahead of every merged-in timestamp so a
+	// subsequent local write wins over what we just merged from a remote.
+	s.advancePastPersisted()
 }
 
 // DeltaMaps returns LWW-Maps containing only entries changed since the given timestamp.
@@ -216,5 +219,27 @@ func (s *StateStore) LoadFromFile(path string) error {
 	if state.Config != nil {
 		s.config.Merge(state.Config)
 	}
+
+	// Advance the local HLC past every persisted timestamp. Without this, a
+	// fresh CLI process (which starts the HLC at zero) can produce a Now()
+	// that is equal to — not strictly After — the timestamps already on
+	// disk, causing follow-up Set/Delete calls to silently no-op.
+	s.advancePastPersisted()
 	return nil
+}
+
+// advancePastPersisted walks every loaded register and updates the HLC so
+// the next Now() call is guaranteed to be strictly after every recorded
+// timestamp.
+func (s *StateStore) advancePastPersisted() {
+	max := s.peers.MaxTimestamp()
+	if rts := s.routes.MaxTimestamp(); rts.After(max) {
+		max = rts
+	}
+	if cts := s.config.MaxTimestamp(); cts.After(max) {
+		max = cts
+	}
+	if !max.IsZero() {
+		s.clock.Update(max)
+	}
 }

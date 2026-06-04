@@ -1,0 +1,4 @@
+  ID                    SELECTOR                          ACTION          TARGETS
+  r-critical            priority:critical                 notify          phone,laptop
+> r-phone               project:api-server                notify          phone
+  r-refactor            session:refactor,source:claude-…  notify+action   telegram

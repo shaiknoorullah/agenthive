@@ -7,10 +7,35 @@ package dispatch
 
 import (
 	"context"
+	"os/exec"
 	"sync"
 
 	"github.com/shaiknoorullah/agenthive/internal/protocols"
 )
+
+// CmdExecutor is a mockable subprocess runner. Surfaces that shell out to
+// external binaries (tmux, notify-send, osascript) take a CmdExecutor so
+// tests can substitute an in-memory recorder.
+type CmdExecutor interface {
+	Run(name string, args ...string) ([]byte, error)
+}
+
+// OSExecutor is the concrete CmdExecutor backed by os/exec. It runs the
+// named binary with the supplied args and returns the combined stdout +
+// stderr output along with any process error.
+type OSExecutor struct{}
+
+// NewOSExecutor constructs the default CmdExecutor that runs real
+// subprocesses via os/exec.Command.
+func NewOSExecutor() *OSExecutor {
+	return &OSExecutor{}
+}
+
+// Run executes name with args and returns the combined output and the
+// process error.
+func (e *OSExecutor) Run(name string, args ...string) ([]byte, error) {
+	return exec.Command(name, args...).CombinedOutput()
+}
 
 // Surface is anything that can present a notification or action request to a
 // user (or downstream agent). Implementations must be safe for concurrent use.

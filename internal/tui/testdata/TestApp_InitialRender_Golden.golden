@@ -1,0 +1,6 @@
+[peers]  routes   actions   logs 
+Peers
+  ID                    NAME              STATUS    LINK          ADDR
+  No peers connected.
+
+agenthive switch: p peers / r routes / a actions / l logs   q quit

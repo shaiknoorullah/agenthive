@@ -59,14 +59,14 @@ Honest snapshot of what ships today and what's next.
 | Atomic first-response-wins (`O_CREAT\|O_EXCL` file queue) | shipped |
 | CLI: `init`, `id`, `peers add\|list`, `start`, `hook`, `respond` | shipped |
 | Log surface (line-delimited JSON) | shipped |
-| tmux per-pane surface (zero-fork status line) | next |
-| Desktop notifications (notify-send / osascript) | next |
-| Bubbletea TUI: peers, routes, actions, logs | next |
+| tmux per-pane surface (zero-fork status line) | shipped |
+| Desktop notifications (notify-send / osascript) | shipped |
+| Bubbletea TUI: peers, routes, actions, logs | shipped |
 | Termux push surface | planned |
 | ntfy, Slack, Discord, PWA surfaces | planned |
 | Signed GossipSub messages with per-peer key validation | planned |
 
-No pre-built binaries yet — build from source. The CLI works, the daemon works, two-peer CRDT convergence is tested. The action gate is end-to-end functional with the log surface; richer surfaces are the next push.
+Pre-built binaries available on the Releases page from v0.1.0 onward. The CLI works, the daemon works, two-peer CRDT convergence is tested. The action gate is end-to-end functional with the log surface; richer surfaces are the next push.
 
 ---
 
@@ -74,11 +74,54 @@ No pre-built binaries yet — build from source. The CLI works, the daemon works
 
 ### Install
 
+**Stable (v0.1.0 or later):**
+
+```bash
+go install github.com/shaiknoorullah/agenthive/cmd/agenthive@v0.1.0
+```
+
+**Latest from main:**
+
 ```bash
 go install github.com/shaiknoorullah/agenthive/cmd/agenthive@latest
 ```
 
-Requires Go 1.22+. Drops `agenthive` into `$GOPATH/bin`.
+**Pre-built binary:**
+
+```bash
+curl -L https://github.com/shaiknoorullah/agenthive/releases/latest/download/agenthive_<version>_<os>_<arch>.tar.gz | tar -xz
+sudo install -m755 agenthive /usr/local/bin/
+```
+
+Replace `<version>`, `<os>`, and `<arch>` to match a release asset (for example
+`0.1.0`, `linux`, `amd64`). Tarballs are published for linux and darwin on
+amd64 and arm64.
+
+Requires Go 1.22+ when building from source. `go install` drops `agenthive`
+into `$GOPATH/bin`.
+
+### TUI
+
+```bash
+agenthive tui
+```
+
+Launches the bubbletea TUI against the local daemon socket. Tabs: peers (`p`),
+routes (`r`), actions (`a`), logs (`l`). Quit with `q` or `ctrl+c`. Requires
+the daemon to be running (`agenthive start`).
+
+### tmux plugin
+
+Install via [TPM](https://github.com/tmux-plugins/tpm) by adding this line to
+`~/.tmux.conf`:
+
+```tmux
+set -g @plugin 'shaiknoorullah/agenthive'
+```
+
+Then reload tmux and press `prefix + I` to fetch and install the plugin. The
+plugin appends a notification segment to your `status-right` and clears it on
+pane focus.
 
 ### Two-peer mesh in five minutes
 

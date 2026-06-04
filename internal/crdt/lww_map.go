@@ -118,6 +118,28 @@ func (m *LWWMap[T]) Merge(other *LWWMap[T]) {
 	}
 }
 
+// MaxTimestamp returns the highest timestamp across all entries (including
+// tombstoned ones). Returns the zero Timestamp if the map is empty. Used by
+// callers that load persisted state and need to advance an HLC past every
+// recorded write so subsequent local writes compare strictly After everything
+// already on disk.
+func (m *LWWMap[T]) MaxTimestamp() Timestamp {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	var max Timestamp
+	for _, reg := range m.entries {
+		if !reg.IsSet() {
+			continue
+		}
+		ts := reg.GetTimestamp()
+		if max.IsZero() || ts.After(max) {
+			max = ts
+		}
+	}
+	return max
+}
+
 // Delta returns a new LWWMap containing only entries with timestamps
 // strictly after the given timestamp.
 func (m *LWWMap[T]) Delta(since Timestamp) *LWWMap[T] {
