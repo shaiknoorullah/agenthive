@@ -200,3 +200,143 @@ func TestNew_InvalidListenAddrFails(t *testing.T) {
 	require.False(t, errors.Is(err, context.Canceled))
 	require.False(t, errors.Is(err, context.DeadlineExceeded))
 }
+
+// TestPeerSourceOrDefault_NilFallsBackToEmpty confirms that the helper
+// substitutes the package-internal no-op closure when Config.PeerSource is
+// nil. The default closure must return an already-closed empty channel so
+// AutoRelay's request loop terminates cleanly.
+func TestPeerSourceOrDefault_NilFallsBackToEmpty(t *testing.T) {
+	got := peerSourceOrDefault(nil)
+	require.NotNil(t, got, "nil PeerSource must fall back to the default closure")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	ch := got(ctx, 8)
+	require.NotNil(t, ch, "default closure must return a non-nil channel")
+
+	// Channel must be drained and closed: receive must succeed immediately
+	// with the zero-value AddrInfo and ok=false.
+	select {
+	case _, ok := <-ch:
+		require.False(t, ok, "default closure must return a closed channel")
+	case <-time.After(time.Second):
+		t.Fatalf("default PeerSource closure did not close its channel")
+	}
+}
+
+// TestPeerSourceOrDefault_CustomHonored confirms that the helper returns the
+// caller's closure verbatim when one is provided. Calling the returned
+// closure must invoke the supplied function with the same num and yield the
+// peers it emits.
+func TestPeerSourceOrDefault_CustomHonored(t *testing.T) {
+	var (
+		callCount int
+		seenNum   int
+	)
+
+	wantPeer := peer.AddrInfo{ID: peer.ID("test-peer-id")}
+	custom := func(ctx context.Context, num int) <-chan peer.AddrInfo {
+		callCount++
+		seenNum = num
+		out := make(chan peer.AddrInfo, 1)
+		out <- wantPeer
+		close(out)
+		return out
+	}
+
+	got := peerSourceOrDefault(custom)
+	require.NotNil(t, got)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	ch := got(ctx, 42)
+	require.Equal(t, 1, callCount, "custom closure must be invoked exactly once")
+	require.Equal(t, 42, seenNum, "custom closure must receive the caller's num")
+
+	select {
+	case info, ok := <-ch:
+		require.True(t, ok, "custom closure's channel must yield the queued peer")
+		require.Equal(t, wantPeer.ID, info.ID)
+	case <-time.After(time.Second):
+		t.Fatalf("custom PeerSource closure did not emit its peer")
+	}
+
+	// Channel must then close.
+	select {
+	case _, ok := <-ch:
+		require.False(t, ok, "custom closure's channel must close after draining")
+	case <-time.After(time.Second):
+		t.Fatalf("custom PeerSource closure did not close its channel")
+	}
+}
+
+// TestNew_AcceptsNilPeerSource confirms a Config without a PeerSource still
+// produces a working host (the default no-op closure is wired in for
+// AutoRelay).
+func TestNew_AcceptsNilPeerSource(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	priv := newTestIdentity(t)
+	h, err := New(ctx, Config{
+		Identity: priv,
+		ListenAddrs: []string{
+			"/ip4/127.0.0.1/tcp/0",
+			"/ip4/127.0.0.1/udp/0/quic-v1",
+		},
+		// PeerSource intentionally nil.
+	})
+	require.NoError(t, err)
+	defer func() { _ = h.Close() }()
+
+	require.NotEmpty(t, h.Addrs(), "host built with nil PeerSource must still listen")
+	require.NotEmpty(t, MultiaddrsFor(h), "MultiaddrsFor must remain sane with nil PeerSource")
+}
+
+// TestNew_AcceptsCustomPeerSource confirms a Config with a caller-supplied
+// PeerSource builds a working host, and that the closure stays alive (i.e.
+// libp2p didn't reject the signature). We don't assert that libp2p invokes
+// the closure on a specific schedule — that's an AutoRelay implementation
+// detail — only that constructing the host succeeds and the closure can be
+// invoked manually with the same signature libp2p uses.
+func TestNew_AcceptsCustomPeerSource(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	priv := newTestIdentity(t)
+
+	var invoked bool
+	custom := func(ctx context.Context, num int) <-chan peer.AddrInfo {
+		invoked = true
+		ch := make(chan peer.AddrInfo)
+		close(ch)
+		return ch
+	}
+
+	h, err := New(ctx, Config{
+		Identity: priv,
+		ListenAddrs: []string{
+			"/ip4/127.0.0.1/tcp/0",
+			"/ip4/127.0.0.1/udp/0/quic-v1",
+		},
+		PeerSource: custom,
+	})
+	require.NoError(t, err)
+	defer func() { _ = h.Close() }()
+
+	require.NotEmpty(t, h.Addrs(), "host built with custom PeerSource must still listen")
+	require.NotEmpty(t, MultiaddrsFor(h))
+
+	// Invoke the custom closure through the same helper New uses to verify
+	// the wiring path honors what the caller supplied rather than silently
+	// substituting the default.
+	resolved := peerSourceOrDefault(custom)
+	ch := resolved(ctx, 4)
+	require.True(t, invoked, "peerSourceOrDefault must return the caller's closure verbatim")
+
+	// Drain the channel so the test doesn't leak goroutines.
+	for range ch {
+	}
+}
